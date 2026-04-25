@@ -1,0 +1,24 @@
+name: iOS Simulator Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - codex/ios-cinavault-server-premium-edition
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate project
+        run: |
+          cd ios/CinavaultServerPremiumEdition
+          xcodegen generate
+      - name: Build for iOS Simulator
+        run: |
+          cd ios/CinavaultServerPremiumEdition
+          xcodebuild -project CinavaultServerPremiumEdition.xcodeproj -scheme CinavaultServerPremiumEdition -sdk iphonesimulator -configuration Debug build

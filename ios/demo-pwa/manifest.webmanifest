@@ -1,0 +1,9 @@
+{
+  "name": "Cinavault Server Premium Edition",
+  "short_name": "Cinavault iOS",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0b1629",
+  "theme_color": "#0b1629",
+  "icons": []
+}

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Cinavault iOS" />
+  <meta name="theme-color" content="#0b1629" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <title>Cinavault Server Premium Edition</title>
+  <style>
+    :root { --bg1:#0b1629; --bg2:#163a5e; --card:rgba(255,255,255,.14); --text:#f2f6fb; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:var(--text);
+      background:linear-gradient(145deg,var(--bg1),var(--bg2)); min-height:100vh; }
+    main { max-width:720px; margin:0 auto; padding:24px 18px 38px; }
+    h1 { margin:0 0 8px; font-size:1.75rem; }
+    p { margin:0 0 16px; opacity:.9; }
+    .card { background:var(--card); border:1px solid rgba(255,255,255,.15); border-radius:14px; padding:14px 16px; margin:10px 0; }
+    .row { display:flex; justify-content:space-between; gap:12px; align-items:center; }
+    .hint { font-size:.86rem; opacity:.82; margin-top:18px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Cinavault Server Premium Edition</h1>
+    <p>Installable iPhone demo shell with Cinavault feature sections.</p>
+    <div class="card"><div class="row"><span>Dashboard</span><span>›</span></div></div>
+    <div class="card"><div class="row"><span>Library</span><span>›</span></div></div>
+    <div class="card"><div class="row"><span>Sources</span><span>›</span></div></div>
+    <div class="card"><div class="row"><span>Downloads</span><span>›</span></div></div>
+    <div class="card"><div class="row"><span>Server</span><span>›</span></div></div>
+    <div class="card"><div class="row"><span>Live TV</span><span>›</span></div></div>
+    <div class="card"><div class="row"><span>Plugins</span><span>›</span></div></div>
+    <div class="card"><div class="row"><span>AI</span><span>›</span></div></div>
+    <div class="card"><div class="row"><span>Cloud</span><span>›</span></div></div>
+    <div class="card"><div class="row"><span>Settings</span><span>›</span></div></div>
+    <p class="hint">Install on iPhone: open hosted URL in Safari, tap Share, then Add to Home Screen.</p>
+  </main>
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./sw.js").catch(() => {});
+    }
+  </script>
+</body>
+</html>
