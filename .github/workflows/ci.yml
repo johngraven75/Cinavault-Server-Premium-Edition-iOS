@@ -31,11 +31,13 @@ jobs:
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 
-      - name: Install project tooling
+      - name: Install pinned project tooling
         run: |
           set -euo pipefail
           brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
-          sudo gem install cocoapods --no-document
+          sudo gem install cocoapods -v 1.16.2 --no-document
+          xcodegen --version
+          pod --version
 
       - name: End-to-end parity governance
         id: governance
@@ -75,6 +77,19 @@ jobs:
       - name: Resolve Google Cast dependency
         id: pods
         run: pod install --repo-update
+
+      - name: Verify CocoaPods resource script permissions
+        id: pod_settings
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -workspace CinaVaultIOS.xcworkspace \
+            -scheme CinaVaultIOS \
+            -configuration Debug \
+            -showBuildSettings > artifacts/diagnostics/build-settings.log
+          grep -E 'ENABLE_USER_SCRIPT_SANDBOXING = NO' artifacts/diagnostics/build-settings.log
+          ! grep -R "ENABLE_USER_SCRIPT_SANDBOXING = YES" CinaVaultIOS.xcodeproj Pods/Pods.xcodeproj
 
       - name: Build for iOS Simulator
         id: build
@@ -140,6 +155,7 @@ jobs:
           CONTRACT_HASHES: ${{ steps.contract_hashes.outcome }}
           XCODEGEN: ${{ steps.xcodegen.outcome }}
           PODS: ${{ steps.pods.outcome }}
+          POD_SETTINGS: ${{ steps.pod_settings.outcome }}
           BUILD: ${{ steps.build.outcome }}
           CONTRACT_TESTS: ${{ steps.contract_tests.outcome }}
           TESTS: ${{ steps.tests.outcome }}
@@ -160,6 +176,7 @@ jobs:
                   "contractHashes": os.environ["CONTRACT_HASHES"],
                   "xcodeGeneration": os.environ["XCODEGEN"],
                   "dependencies": os.environ["PODS"],
+                  "podScriptSettings": os.environ["POD_SETTINGS"],
                   "build": os.environ["BUILD"],
                   "contractTests": os.environ["CONTRACT_TESTS"],
                   "tests": os.environ["TESTS"],
