@@ -17,7 +17,12 @@ final class CinaVaultModel: ObservableObject {
     @Published private(set) var controlSnapshot = ControlSnapshot.unavailable(
         "The server has not synchronized mobile controls yet."
     )
-    @Published var destination: AppDestination = .library
+
+    // SwiftUI's global @ViewBuilder router is evaluated from a nonisolated helper.
+    // Reads are safe because all mutations remain confined to setDestination(_:) on MainActor.
+    nonisolated(unsafe) private(set) var destination: AppDestination = .library
+    @Published private var navigationRevision: UInt64 = 0
+
     @Published var selectedMedia: MediaItem?
     @Published var searchQuery = ""
     @Published var loading = false
@@ -91,20 +96,20 @@ final class CinaVaultModel: ObservableObject {
         library = []
         controlSnapshot = .unavailable("Sign in to synchronize controls.")
         selectedMedia = nil
-        destination = .library
+        setDestination(.library)
         statusMessage = "Signed out"
         errorMessage = nil
     }
 
     func navigate(_ destination: AppDestination) {
-        self.destination = destination
+        setDestination(destination)
         commandPaletteOpen = false
         errorMessage = nil
     }
 
     func open(_ item: MediaItem) {
         selectedMedia = item
-        destination = .player
+        setDestination(.player)
         statusMessage = "Opening \(item.title)"
     }
 
@@ -175,7 +180,9 @@ final class CinaVaultModel: ObservableObject {
     func setAutopilotEnabled(_ enabled: Bool) {
         preferences.aiAutopilotEnabled = enabled
         persistPreferences()
-        library = enabled ? smartSort(library) : library.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        library = enabled ? smartSort(library) : library.sorted {
+            $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
+        }
         statusMessage = enabled ? "AI Autopilot enabled" : "AI Autopilot paused on this device"
     }
 
@@ -202,6 +209,12 @@ final class CinaVaultModel: ObservableObject {
 
     func clearError() {
         errorMessage = nil
+    }
+
+    private func setDestination(_ destination: AppDestination) {
+        guard self.destination != destination else { return }
+        self.destination = destination
+        navigationRevision &+= 1
     }
 
     private func authenticate(
