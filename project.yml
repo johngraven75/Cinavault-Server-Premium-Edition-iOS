@@ -47,3 +47,5 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.cinavault.premium.ios.tests
         GENERATE_INFOPLIST_FILE: YES
         ENABLE_USER_SCRIPT_SANDBOXING: NO
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/CinaVault.app/CinaVault"
+        BUNDLE_LOADER: "$(TEST_HOST)"
