@@ -17,13 +17,16 @@ concurrency:
 
 jobs:
   verify-test-build:
-    name: Governance, Test, and Build
+    name: Governance, Contracts, Test, and Build
     runs-on: macos-15
-    timeout-minutes: 60
+    timeout-minutes: 70
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Prepare evidence directory
+        run: mkdir -p artifacts/diagnostics
 
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
@@ -35,15 +38,46 @@ jobs:
           sudo gem install cocoapods --no-document
 
       - name: End-to-end parity governance
-        run: python3 scripts/verify_project.py
+        id: governance
+        run: python3 scripts/verify_project.py 2>&1 | tee artifacts/diagnostics/governance.log
+
+      - name: Verify canonical contract hashes
+        id: contract_hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' | tee artifacts/diagnostics/shared-contract-hashes.json
+          import hashlib
+          import json
+          from pathlib import Path
+
+          root = Path.cwd()
+          manifest = json.loads((root / "contracts/v1/contract-manifest.json").read_text())
+          results = {}
+          for name, record in manifest["fixtures"].items():
+              payload = (root / "contracts/v1/golden" / name).read_bytes()
+              actual = hashlib.sha256(payload).hexdigest()
+              expected = record["sha256"]
+              if actual != expected:
+                  raise SystemExit(f"Contract hash mismatch for {name}: {actual} != {expected}")
+              results[name] = {"sha256": actual, "verified": True}
+          print(json.dumps({
+              "contractVersion": manifest["contractVersion"],
+              "platform": "swift",
+              "fixtures": results,
+          }, indent=2))
+          PY
 
       - name: Generate Xcode project
+        id: xcodegen
         run: xcodegen generate
 
       - name: Resolve Google Cast dependency
+        id: pods
         run: pod install --repo-update
 
       - name: Build for iOS Simulator
+        id: build
         run: |
           set -euo pipefail
           xcodebuild \
@@ -53,7 +87,7 @@ jobs:
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO \
-            build | tee ios-build.log
+            build | tee artifacts/diagnostics/ios-build.log
 
       - name: Select available iPhone simulator
         id: simulator
@@ -63,7 +97,8 @@ jobs:
           DEVICE_ID="$(xcrun simctl list devices available -j | python3 -c 'import json,sys; data=json.load(sys.stdin)["devices"]; print(next(device["udid"] for devices in data.values() for device in devices if device.get("isAvailable") and device.get("name", "").startswith("iPhone")))')"
           echo "device_id=${DEVICE_ID}" >> "$GITHUB_OUTPUT"
 
-      - name: Run unit tests
+      - name: Swift shared contract conformance tests
+        id: contract_tests
         run: |
           set -euo pipefail
           xcodebuild \
@@ -72,9 +107,23 @@ jobs:
             -configuration Debug \
             -destination 'id=${{ steps.simulator.outputs.device_id }}' \
             CODE_SIGNING_ALLOWED=NO \
-            test | tee ios-tests.log
+            -only-testing:CinaVaultIOSTests/SharedContractConformanceTests \
+            test | tee artifacts/diagnostics/contract-tests.log
+
+      - name: Run complete unit tests
+        id: tests
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -workspace CinaVaultIOS.xcworkspace \
+            -scheme CinaVaultIOS \
+            -configuration Debug \
+            -destination 'id=${{ steps.simulator.outputs.device_id }}' \
+            CODE_SIGNING_ALLOWED=NO \
+            test | tee artifacts/diagnostics/ios-tests.log
 
       - name: Verify built application
+        id: app
         run: |
           set -euo pipefail
           APP_PATH="$(find "$HOME/Library/Developer/Xcode/DerivedData" -path '*/Build/Products/Debug-iphonesimulator/CinaVault.app' -type d -print -quit)"
@@ -84,23 +133,61 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" cinavault-ios-v2-build-2-simulator.zip
           shasum -a 256 cinavault-ios-v2-build-2-simulator.zip > cinavault-ios-v2-build-2-simulator.sha256
 
+      - name: Write iOS evidence summary
+        if: always()
+        env:
+          GOVERNANCE: ${{ steps.governance.outcome }}
+          CONTRACT_HASHES: ${{ steps.contract_hashes.outcome }}
+          XCODEGEN: ${{ steps.xcodegen.outcome }}
+          PODS: ${{ steps.pods.outcome }}
+          BUILD: ${{ steps.build.outcome }}
+          CONTRACT_TESTS: ${{ steps.contract_tests.outcome }}
+          TESTS: ${{ steps.tests.outcome }}
+          APP: ${{ steps.app.outcome }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          evidence = {
+              "schemaVersion": 1,
+              "platform": "ios",
+              "commit": os.environ.get("GITHUB_SHA", "local"),
+              "contractVersion": 1,
+              "steps": {
+                  "governance": os.environ["GOVERNANCE"],
+                  "contractHashes": os.environ["CONTRACT_HASHES"],
+                  "xcodeGeneration": os.environ["XCODEGEN"],
+                  "dependencies": os.environ["PODS"],
+                  "build": os.environ["BUILD"],
+                  "contractTests": os.environ["CONTRACT_TESTS"],
+                  "tests": os.environ["TESTS"],
+                  "application": os.environ["APP"],
+              },
+          }
+          Path("artifacts/diagnostics/ios-evidence.json").write_text(
+              json.dumps(evidence, indent=2) + "\n"
+          )
+          PY
+
       - name: Upload simulator application
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: cinavault-ios-v2-build-2-simulator-${{ github.sha }}
           path: |
             cinavault-ios-v2-build-2-simulator.zip
             cinavault-ios-v2-build-2-simulator.sha256
+            contracts/v1/contract-manifest.json
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30
 
-      - name: Upload diagnostics
+      - name: Upload diagnostics and evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: cinavault-ios-diagnostics-${{ github.sha }}
-          path: |
-            ios-build.log
-            ios-tests.log
-          if-no-files-found: ignore
-          retention-days: 14
+          path: artifacts/diagnostics/*
+          if-no-files-found: warn
+          retention-days: 30
