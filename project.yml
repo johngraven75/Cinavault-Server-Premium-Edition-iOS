@@ -37,6 +37,9 @@ targets:
     platform: iOS
     sources:
       - path: CinaVaultIOSTests
+    resources:
+      - path: contracts/v1/golden
+        type: folder
     dependencies:
       - target: CinaVaultIOS
     settings:
