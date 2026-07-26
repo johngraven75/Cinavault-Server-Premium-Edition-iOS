@@ -38,9 +38,10 @@ targets:
     platform: iOS
     sources:
       - path: CinaVaultIOSTests
-    resources:
       - path: contracts/v1/golden/metadata-provider-registry.json
+        buildPhase: resources
       - path: contracts/v1/golden/artwork-cache-entry.json
+        buildPhase: resources
     dependencies:
       - target: CinaVaultIOS
     settings:
