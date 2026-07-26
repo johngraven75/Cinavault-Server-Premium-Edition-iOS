@@ -21,6 +21,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cinavault.premium.ios
         PRODUCT_NAME: CinaVault
+        PRODUCT_MODULE_NAME: CinaVaultIOS
         INFOPLIST_FILE: CinaVaultIOS/Info.plist
         MARKETING_VERSION: 2.0.2
         CURRENT_PROJECT_VERSION: 2
