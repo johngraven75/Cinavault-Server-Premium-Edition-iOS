@@ -13,6 +13,69 @@ struct MetadataProviderContract: Codable, Equatable, Sendable {
     let implemented: Bool
     let endpoint: String?
     let customEndpoint: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case category
+        case enabled
+        case requiresKey
+        case implemented
+        case endpoint
+        case customEndpoint
+    }
+
+    init(
+        id: String,
+        name: String,
+        category: String,
+        enabled: Bool,
+        requiresKey: Bool,
+        implemented: Bool,
+        endpoint: String?,
+        customEndpoint: String?
+    ) {
+        self.id = id
+        self.name = name
+        self.category = category
+        self.enabled = enabled
+        self.requiresKey = requiresKey
+        self.implemented = implemented
+        self.endpoint = endpoint
+        self.customEndpoint = customEndpoint
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        category = try container.decode(String.self, forKey: .category)
+        enabled = try container.decode(Bool.self, forKey: .enabled)
+        requiresKey = try container.decode(Bool.self, forKey: .requiresKey)
+        implemented = try container.decode(Bool.self, forKey: .implemented)
+        endpoint = try container.decodeIfPresent(String.self, forKey: .endpoint)
+        customEndpoint = try container.decodeIfPresent(String.self, forKey: .customEndpoint)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(category, forKey: .category)
+        try container.encode(enabled, forKey: .enabled)
+        try container.encode(requiresKey, forKey: .requiresKey)
+        try container.encode(implemented, forKey: .implemented)
+        if let endpoint {
+            try container.encode(endpoint, forKey: .endpoint)
+        } else {
+            try container.encodeNil(forKey: .endpoint)
+        }
+        if let customEndpoint {
+            try container.encode(customEndpoint, forKey: .customEndpoint)
+        } else {
+            try container.encodeNil(forKey: .customEndpoint)
+        }
+    }
 }
 
 struct MetadataProviderRegistryContract: Codable, Equatable, Sendable {
@@ -37,6 +100,90 @@ struct ArtworkCacheEntryContract: Codable, Equatable, Sendable {
     let deliveryPath: String
     let localPathExposed: Bool
     let expiresAt: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case schemaVersion
+        case mediaKey
+        case kind
+        case mimeType
+        case byteLength
+        case sha256
+        case width
+        case height
+        case sourceProvider
+        case cacheState
+        case deliveryPath
+        case localPathExposed
+        case expiresAt
+    }
+
+    init(
+        schemaVersion: Int,
+        mediaKey: String,
+        kind: String,
+        mimeType: String,
+        byteLength: Int64,
+        sha256: String,
+        width: Int,
+        height: Int,
+        sourceProvider: String,
+        cacheState: String,
+        deliveryPath: String,
+        localPathExposed: Bool,
+        expiresAt: String?
+    ) {
+        self.schemaVersion = schemaVersion
+        self.mediaKey = mediaKey
+        self.kind = kind
+        self.mimeType = mimeType
+        self.byteLength = byteLength
+        self.sha256 = sha256
+        self.width = width
+        self.height = height
+        self.sourceProvider = sourceProvider
+        self.cacheState = cacheState
+        self.deliveryPath = deliveryPath
+        self.localPathExposed = localPathExposed
+        self.expiresAt = expiresAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        schemaVersion = try container.decode(Int.self, forKey: .schemaVersion)
+        mediaKey = try container.decode(String.self, forKey: .mediaKey)
+        kind = try container.decode(String.self, forKey: .kind)
+        mimeType = try container.decode(String.self, forKey: .mimeType)
+        byteLength = try container.decode(Int64.self, forKey: .byteLength)
+        sha256 = try container.decode(String.self, forKey: .sha256)
+        width = try container.decode(Int.self, forKey: .width)
+        height = try container.decode(Int.self, forKey: .height)
+        sourceProvider = try container.decode(String.self, forKey: .sourceProvider)
+        cacheState = try container.decode(String.self, forKey: .cacheState)
+        deliveryPath = try container.decode(String.self, forKey: .deliveryPath)
+        localPathExposed = try container.decode(Bool.self, forKey: .localPathExposed)
+        expiresAt = try container.decodeIfPresent(String.self, forKey: .expiresAt)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(schemaVersion, forKey: .schemaVersion)
+        try container.encode(mediaKey, forKey: .mediaKey)
+        try container.encode(kind, forKey: .kind)
+        try container.encode(mimeType, forKey: .mimeType)
+        try container.encode(byteLength, forKey: .byteLength)
+        try container.encode(sha256, forKey: .sha256)
+        try container.encode(width, forKey: .width)
+        try container.encode(height, forKey: .height)
+        try container.encode(sourceProvider, forKey: .sourceProvider)
+        try container.encode(cacheState, forKey: .cacheState)
+        try container.encode(deliveryPath, forKey: .deliveryPath)
+        try container.encode(localPathExposed, forKey: .localPathExposed)
+        if let expiresAt {
+            try container.encode(expiresAt, forKey: .expiresAt)
+        } else {
+            try container.encodeNil(forKey: .expiresAt)
+        }
+    }
 }
 
 protocol MetadataProviderRegistryInterface: Sendable {
