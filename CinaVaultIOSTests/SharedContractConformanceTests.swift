@@ -3,6 +3,7 @@ import Foundation
 import XCTest
 @testable import CinaVaultIOS
 
+@MainActor
 final class SharedContractConformanceTests: XCTestCase {
     func testMetadataProviderGoldenFileHashAndRoundTrip() throws {
         let data = try fixtureData(named: "metadata-provider-registry.json")
@@ -13,8 +14,8 @@ final class SharedContractConformanceTests: XCTestCase {
 
         let encoded = try JSONEncoder().encode(decoded)
         XCTAssertEqual(try canonicalJSON(encoded), try canonicalJSON(data))
-        XCTAssertEqual(decoded.providers.map(\.id), ["tvmaze", "tmdb"])
-        XCTAssertTrue(decoded.providers.allSatisfy(\.enabled))
+        XCTAssertEqual(decoded.providers.map { provider in provider.id }, ["tvmaze", "tmdb"])
+        XCTAssertTrue(decoded.providers.allSatisfy { provider in provider.enabled })
     }
 
     func testArtworkGoldenFileHashAndRoundTrip() throws {
@@ -55,15 +56,22 @@ final class SharedContractConformanceTests: XCTestCase {
     }
 
     private func fixtureData(named name: String) throws -> Data {
-        let repositoryRoot = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-        let fixture = repositoryRoot
-            .appendingPathComponent("contracts", isDirectory: true)
-            .appendingPathComponent("v1", isDirectory: true)
-            .appendingPathComponent("golden", isDirectory: true)
-            .appendingPathComponent(name)
-        return try Data(contentsOf: fixture)
+        let bundle = Bundle(for: SharedContractConformanceTests.self)
+        let filename = (name as NSString).deletingPathExtension
+        let extensionName = (name as NSString).pathExtension
+        let candidates = [
+            bundle.url(forResource: filename, withExtension: extensionName),
+            bundle.url(
+                forResource: filename,
+                withExtension: extensionName,
+                subdirectory: "golden"
+            ),
+        ]
+        guard let fixture = candidates.compactMap({ candidate in candidate }).first else {
+            XCTFail("Missing bundled shared-contract fixture: \(name)")
+            throw FixtureError.missing(name)
+        }
+        return try Data(contentsOf: fixture, options: [.mappedIfSafe])
     }
 
     private func canonicalJSON(_ data: Data) throws -> Data {
@@ -73,7 +81,18 @@ final class SharedContractConformanceTests: XCTestCase {
 
     private func sha256(_ data: Data) -> String {
         SHA256.hash(data: data)
-            .map { String(format: "%02x", $0) }
+            .map { byte in String(format: "%02x", byte) }
             .joined()
+    }
+
+    private enum FixtureError: LocalizedError {
+        case missing(String)
+
+        var errorDescription: String? {
+            switch self {
+            case let .missing(name):
+                "The canonical shared-contract fixture \(name) was not bundled into the test target."
+            }
+        }
     }
 }
