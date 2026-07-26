@@ -76,7 +76,7 @@ jobs:
 
       - name: Resolve Google Cast dependency
         id: pods
-        run: pod install --repo-update
+        run: pod install --repo-update 2>&1 | tee artifacts/diagnostics/pod-install.log
 
       - name: Verify CocoaPods resource script permissions
         id: pod_settings
@@ -87,7 +87,8 @@ jobs:
             -workspace CinaVaultIOS.xcworkspace \
             -scheme CinaVaultIOS \
             -configuration Debug \
-            -showBuildSettings > artifacts/diagnostics/build-settings.log
+            -showBuildSettings \
+            2>&1 | tee artifacts/diagnostics/build-settings.log
           grep -E 'ENABLE_USER_SCRIPT_SANDBOXING = NO' artifacts/diagnostics/build-settings.log
           ! grep -R "ENABLE_USER_SCRIPT_SANDBOXING = YES" CinaVaultIOS.xcodeproj Pods/Pods.xcodeproj
 
@@ -102,7 +103,8 @@ jobs:
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO \
-            build | tee artifacts/diagnostics/ios-build.log
+            build \
+            2>&1 | tee artifacts/diagnostics/ios-build.log
 
       - name: Select available iPhone simulator
         id: simulator
@@ -123,7 +125,8 @@ jobs:
             -destination 'id=${{ steps.simulator.outputs.device_id }}' \
             CODE_SIGNING_ALLOWED=NO \
             -only-testing:CinaVaultIOSTests/SharedContractConformanceTests \
-            test | tee artifacts/diagnostics/contract-tests.log
+            test \
+            2>&1 | tee artifacts/diagnostics/contract-tests.log
 
       - name: Run complete unit tests
         id: tests
@@ -135,7 +138,8 @@ jobs:
             -configuration Debug \
             -destination 'id=${{ steps.simulator.outputs.device_id }}' \
             CODE_SIGNING_ALLOWED=NO \
-            test | tee artifacts/diagnostics/ios-tests.log
+            test \
+            2>&1 | tee artifacts/diagnostics/ios-tests.log
 
       - name: Verify built application
         id: app
