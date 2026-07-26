@@ -178,7 +178,7 @@ actor CinaVaultAPI {
         return data
     }
 
-    func absoluteURL(session: RemoteSession, path: String) throws -> URL {
+    nonisolated func absoluteURL(session: RemoteSession, path: String) throws -> URL {
         try resolve(baseURL: session.endpoint, path: path)
     }
 
@@ -227,7 +227,7 @@ actor CinaVaultAPI {
         return url
     }
 
-    private func resolve(baseURL: URL, path: String) throws -> URL {
+    private nonisolated func resolve(baseURL: URL, path: String) throws -> URL {
         if let absolute = URL(string: path), absolute.scheme != nil {
             guard absolute.scheme?.lowercased() == "https" else {
                 throw CinaVaultAPIError.insecureURL
