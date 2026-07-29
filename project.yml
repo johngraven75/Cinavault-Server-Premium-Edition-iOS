@@ -1,0 +1,53 @@
+name: CinaVaultIOS
+options:
+  minimumXcodeGenVersion: 2.42.0
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.10"
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    SWIFT_STRICT_CONCURRENCY: targeted
+    SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+targets:
+  CinaVaultIOS:
+    type: application
+    platform: iOS
+    sources:
+      - path: CinaVaultIOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.cinavault.premium.ios
+        PRODUCT_NAME: CinaVault
+        PRODUCT_MODULE_NAME: CinaVaultIOS
+        INFOPLIST_FILE: CinaVaultIOS/Info.plist
+        MARKETING_VERSION: 2.0.2
+        CURRENT_PROJECT_VERSION: 2
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+        OTHER_LDFLAGS: "$(inherited) -ObjC -lc++"
+        ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
+    scheme:
+      gatherCoverageData: true
+      testTargets:
+        - CinaVaultIOSTests
+  CinaVaultIOSTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: CinaVaultIOSTests
+      - path: contracts/v1/golden/metadata-provider-registry.json
+        buildPhase: resources
+      - path: contracts/v1/golden/artwork-cache-entry.json
+        buildPhase: resources
+    dependencies:
+      - target: CinaVaultIOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.cinavault.premium.ios.tests
+        GENERATE_INFOPLIST_FILE: YES
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/CinaVault.app/CinaVault"
+        BUNDLE_LOADER: "$(TEST_HOST)"
