@@ -125,6 +125,10 @@ require_all(
         "createCastGrant",
         "smartSort",
         "Task.sleep",
+        "refreshedLibrary",
+        "$0.mediaKey == selected.mediaKey",
+        "Managed by Windows secure store",
+        "Startup readiness synchronized from Windows",
     ],
 )
 require_all(
@@ -158,6 +162,10 @@ views = require_all(
         "RecoveryView",
         "CONTROL ENDPOINT PENDING",
         "no action is represented as available",
+        "HF token",
+        "model.hfTokenStatus",
+        "model.metadataProviderStatus",
+        "Provider secrets remain in the Windows secure store",
     ],
 )
 for forbidden in (".blur(", ".scaleEffect(", "ultraThinMaterial", "regularMaterial"):
@@ -181,6 +189,16 @@ require_all(
         "markCleanBackground",
         "CinaVaultRootView",
         "preferredColorScheme(.dark)",
+    ],
+)
+
+require_all(
+    "docs/CARRY_FORWARD.md",
+    [
+        "Stable media-key reconciliation",
+        "Windows secure store",
+        "provider readiness",
+        "No registered capability may be removed",
     ],
 )
 
