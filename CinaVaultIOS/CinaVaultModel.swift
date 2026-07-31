@@ -76,6 +76,19 @@ final class CinaVaultModel: ObservableObject {
         }
     }
 
+    var hfTokenStatus: String {
+        controlSnapshot.section(.intelligence)?.metrics.first {
+            $0.label.localizedCaseInsensitiveContains("token")
+        }?.value ?? "Managed by Windows secure store"
+    }
+
+    var metadataProviderStatus: String {
+        controlSnapshot.section(.extensions)?.metrics.first {
+            $0.label.localizedCaseInsensitiveContains("provider")
+                || $0.label.localizedCaseInsensitiveContains("metadata")
+        }?.value ?? "Startup readiness synchronized from Windows"
+    }
+
     func loginWithPassword(endpoint: String, email: String, password: String) {
         authenticate(status: "Signing in securely") {
             try await self.api.loginWithPassword(endpoint: endpoint, email: email, password: password)
@@ -131,7 +144,11 @@ final class CinaVaultModel: ObservableObject {
             )
 
             self.serverInfo = serverInfo
-            library = preferences.aiAutopilotEnabled ? smartSort(mediaItems) : mediaItems
+            let refreshedLibrary = preferences.aiAutopilotEnabled ? smartSort(mediaItems) : mediaItems
+            library = refreshedLibrary
+            if let selected = selectedMedia {
+                selectedMedia = refreshedLibrary.first { $0.mediaKey == selected.mediaKey } ?? selected
+            }
             controlSnapshot = controls
             refreshing = false
             loading = false
