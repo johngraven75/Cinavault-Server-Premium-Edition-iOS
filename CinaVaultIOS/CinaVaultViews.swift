@@ -799,6 +799,16 @@ private struct IntelligenceView: View {
                 .padding(16)
                 .cvPanel(accent: CVColor.magenta)
 
+                VStack(alignment: .leading, spacing: 8) {
+                    DetailRow(label: "HF token", value: model.hfTokenStatus)
+                    DetailRow(label: "Providers", value: model.metadataProviderStatus)
+                    Text("Provider secrets remain in the Windows secure store; iOS receives readiness and enriched media over authenticated HTTPS.")
+                        .font(.caption)
+                        .foregroundStyle(CVColor.muted)
+                }
+                .padding(16)
+                .cvPanel(accent: CVColor.cyan)
+
                 HStack(spacing: 10) {
                     StatusChip(value: String(model.library.filter { $0.artworkUrl == nil }.count), label: "Artwork", accent: CVColor.magenta)
                     StatusChip(value: String(model.library.filter { !$0.verified }.count), label: "Unverified", accent: CVColor.solar)
