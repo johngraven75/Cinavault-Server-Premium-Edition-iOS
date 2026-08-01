@@ -48,6 +48,19 @@ require_all(
         "unsignedDeviceArchive",
     ],
 )
+require_all(
+    ".github/workflows/release.yml",
+    [
+        "IOS_DISTRIBUTION_CERTIFICATE_BASE64",
+        "IOS_PROVISIONING_PROFILE_BASE64",
+        "APPLE_TEAM_ID",
+        "Validate, sign, and package iPhone IPA",
+        "Run simulator tests before signing",
+        "codesign --verify --deep --strict",
+        "CinaVault-iOS-v2-Build-2-signed.ipa",
+        "if: inputs.publish == true",
+    ],
+)
 info = require_all(
     "CinaVaultIOS/Info.plist",
     [

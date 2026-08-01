@@ -1,0 +1,192 @@
+name: iOS v2 Build 2 Signed Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      export_method:
+        description: Apple provisioning method for the test IPA
+        required: true
+        default: development
+        type: choice
+        options:
+          - development
+          - ad-hoc
+      publish:
+        description: Publish the verified IPA as a GitHub prerelease
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ios-v2-build-2-signed-release
+  cancel-in-progress: false
+
+jobs:
+  validate-sign-and-package:
+    name: Validate, sign, and package iPhone IPA
+    runs-on: macos-15
+    timeout-minutes: 75
+    env:
+      IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+      IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+      IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - name: Checkout selected verified ref
+        uses: actions/checkout@v4
+
+      - name: Require Apple signing credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=()
+          [[ -n "${IOS_DISTRIBUTION_CERTIFICATE_BASE64:-}" ]] || missing+=(IOS_DISTRIBUTION_CERTIFICATE_BASE64)
+          [[ -n "${IOS_DISTRIBUTION_CERTIFICATE_PASSWORD:-}" ]] || missing+=(IOS_DISTRIBUTION_CERTIFICATE_PASSWORD)
+          [[ -n "${IOS_PROVISIONING_PROFILE_BASE64:-}" ]] || missing+=(IOS_PROVISIONING_PROFILE_BASE64)
+          [[ -n "${APPLE_TEAM_ID:-}" ]] || missing+=(APPLE_TEAM_ID)
+          if (( ${#missing[@]} > 0 )); then
+            printf 'Signed iPhone release requires repository secrets: %s\n' "${missing[*]}" >&2
+            exit 1
+          fi
+
+      - name: Install pinned project tooling
+        run: |
+          set -euo pipefail
+          brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
+          sudo gem install cocoapods -v 1.16.2 --no-document
+
+      - name: Verify governance and generate workspace
+        run: |
+          set -euo pipefail
+          python3 scripts/verify_project.py
+          xcodegen generate
+          pod install --repo-update
+
+      - name: Install certificate and provisioning profile
+        id: signing
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEYCHAIN_PATH="$RUNNER_TEMP/cinavault-signing.keychain-db"
+          CERTIFICATE_PATH="$RUNNER_TEMP/cinavault-signing.p12"
+          PROFILE_PATH="$RUNNER_TEMP/cinavault.mobileprovision"
+          PROFILE_PLIST="$RUNNER_TEMP/cinavault-profile.plist"
+          KEYCHAIN_PASSWORD="$(openssl rand -hex 24)"
+
+          printf '%s' "$IOS_DISTRIBUTION_CERTIFICATE_BASE64" | base64 --decode > "$CERTIFICATE_PATH"
+          printf '%s' "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$PROFILE_PATH"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERTIFICATE_PATH" -P "$IOS_DISTRIBUTION_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+
+          security cms -D -i "$PROFILE_PATH" > "$PROFILE_PLIST"
+          PROFILE_UUID="$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$PROFILE_PLIST")"
+          PROFILE_NAME="$(/usr/libexec/PlistBuddy -c 'Print :Name' "$PROFILE_PLIST")"
+          PROFILE_TEAM="$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "$PROFILE_PLIST")"
+          PROFILE_APP_ID="$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$PROFILE_PLIST")"
+          [[ "$PROFILE_TEAM" = "$APPLE_TEAM_ID" ]]
+          [[ "$PROFILE_APP_ID" = "$APPLE_TEAM_ID.com.cinavault.premium.ios" || "$PROFILE_APP_ID" = "$APPLE_TEAM_ID.*" ]]
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+
+          SIGNING_IDENTITY="$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | sed -n 's/.*"\(.*\)"/\1/p' | head -n 1)"
+          [[ -n "$SIGNING_IDENTITY" ]]
+          echo "profile_name=$PROFILE_NAME" >> "$GITHUB_OUTPUT"
+          echo "signing_identity=$SIGNING_IDENTITY" >> "$GITHUB_OUTPUT"
+
+      - name: Run simulator tests before signing
+        run: |
+          set -euo pipefail
+          DEVICE_ID="$(xcrun simctl list devices available -j | python3 -c 'import json,sys; data=json.load(sys.stdin)["devices"]; print(next(device["udid"] for devices in data.values() for device in devices if device.get("isAvailable") and device.get("name", "").startswith("iPhone")))')"
+          xcodebuild \
+            -workspace CinaVaultIOS.xcworkspace \
+            -scheme CinaVaultIOS \
+            -configuration Debug \
+            -destination "id=$DEVICE_ID" \
+            CODE_SIGNING_ALLOWED=NO \
+            test
+
+      - name: Archive and export signed IPA
+        shell: bash
+        env:
+          PROFILE_NAME: ${{ steps.signing.outputs.profile_name }}
+          SIGNING_IDENTITY: ${{ steps.signing.outputs.signing_identity }}
+          EXPORT_METHOD: ${{ inputs.export_method }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/export
+          ARCHIVE_PATH="$PWD/artifacts/CinaVault-iOS-v2-Build-2.xcarchive"
+          xcodebuild \
+            -workspace CinaVaultIOS.xcworkspace \
+            -scheme CinaVaultIOS \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$ARCHIVE_PATH" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="$SIGNING_IDENTITY" \
+            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
+            archive
+
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>$EXPORT_METHOD</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>teamID</key><string>$APPLE_TEAM_ID</string>
+            <key>provisioningProfiles</key><dict>
+              <key>com.cinavault.premium.ios</key><string>$PROFILE_NAME</string>
+            </dict>
+          </dict></plist>
+          PLIST
+          xcodebuild -exportArchive \
+            -archivePath "$ARCHIVE_PATH" \
+            -exportPath artifacts/export \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
+          IPA_PATH="$(find artifacts/export -maxdepth 1 -name '*.ipa' -type f -print -quit)"
+          test -s "$IPA_PATH"
+          mv "$IPA_PATH" artifacts/CinaVault-iOS-v2-Build-2-signed.ipa
+
+      - name: Verify signed IPA and checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/ipa-verify"
+          mkdir -p "$RUNNER_TEMP/ipa-verify"
+          unzip -q artifacts/CinaVault-iOS-v2-Build-2-signed.ipa -d "$RUNNER_TEMP/ipa-verify"
+          APP_PATH="$(find "$RUNNER_TEMP/ipa-verify/Payload" -maxdepth 1 -name '*.app' -type d -print -quit)"
+          test -n "$APP_PATH"
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP_PATH/Info.plist")" = "com.cinavault.premium.ios"
+          lipo -info "$APP_PATH/CinaVault" | grep -q arm64
+          shasum -a 256 artifacts/CinaVault-iOS-v2-Build-2-signed.ipa > artifacts/CinaVault-iOS-v2-Build-2-signed.sha256
+
+      - name: Upload verified signed IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: cinavault-ios-v2-build-2-signed-${{ github.sha }}
+          path: |
+            artifacts/CinaVault-iOS-v2-Build-2-signed.ipa
+            artifacts/CinaVault-iOS-v2-Build-2-signed.sha256
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Publish verified iOS prerelease
+        if: inputs.publish == true
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v2-build-2-ios
+          target_commitish: ${{ github.sha }}
+          name: CinaVault iOS v2 Build 2
+          prerelease: true
+          fail_on_unmatched_files: true
+          files: |
+            artifacts/CinaVault-iOS-v2-Build-2-signed.ipa
+            artifacts/CinaVault-iOS-v2-Build-2-signed.sha256
