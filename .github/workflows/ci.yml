@@ -152,6 +152,47 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" cinavault-ios-v2-build-2-simulator.zip
           shasum -a 256 cinavault-ios-v2-build-2-simulator.zip > cinavault-ios-v2-build-2-simulator.sha256
 
+      - name: Build unsigned iPhone device archive and IPA
+        id: device_build
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARCHIVE_PATH="$PWD/artifacts/CinaVault-iOS-v2-Build-2-unsigned.xcarchive"
+          xcodebuild \
+            -workspace CinaVaultIOS.xcworkspace \
+            -scheme CinaVaultIOS \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$ARCHIVE_PATH" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            AD_HOC_CODE_SIGNING_ALLOWED=NO \
+            archive \
+            2>&1 | tee artifacts/diagnostics/ios-device-archive.log
+
+          APP_PATH="$ARCHIVE_PATH/Products/Applications/CinaVault.app"
+          test -d "$APP_PATH"
+          test -f "$APP_PATH/CinaVault"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP_PATH/Info.plist")" = "com.cinavault.premium.ios"
+          lipo -info "$APP_PATH/CinaVault" | tee artifacts/diagnostics/ios-device-architectures.log
+          lipo -info "$APP_PATH/CinaVault" | grep -q arm64
+          if codesign --verify --deep --strict "$APP_PATH" >/dev/null 2>&1; then
+            echo "Expected an unsigned device application, but a valid signature was found." >&2
+            exit 1
+          fi
+
+          mkdir -p artifacts/unsigned-ipa/Payload
+          ditto "$APP_PATH" artifacts/unsigned-ipa/Payload/CinaVault.app
+          ditto -c -k --sequesterRsrc --keepParent artifacts/unsigned-ipa/Payload \
+            artifacts/CinaVault-iOS-v2-Build-2-unsigned.ipa
+          ditto -c -k --sequesterRsrc --keepParent "$ARCHIVE_PATH" \
+            artifacts/CinaVault-iOS-v2-Build-2-unsigned-xcarchive.zip
+          shasum -a 256 \
+            artifacts/CinaVault-iOS-v2-Build-2-unsigned.ipa \
+            artifacts/CinaVault-iOS-v2-Build-2-unsigned-xcarchive.zip \
+            > artifacts/CinaVault-iOS-v2-Build-2-unsigned.sha256
+
       - name: Write iOS evidence summary
         if: always()
         env:
@@ -164,6 +205,7 @@ jobs:
           CONTRACT_TESTS: ${{ steps.contract_tests.outcome }}
           TESTS: ${{ steps.tests.outcome }}
           APP: ${{ steps.app.outcome }}
+          DEVICE_BUILD: ${{ steps.device_build.outcome }}
         run: |
           python3 - <<'PY'
           import json
@@ -185,6 +227,7 @@ jobs:
                   "contractTests": os.environ["CONTRACT_TESTS"],
                   "tests": os.environ["TESTS"],
                   "application": os.environ["APP"],
+                  "unsignedDeviceArchive": os.environ["DEVICE_BUILD"],
               },
           }
           Path("artifacts/diagnostics/ios-evidence.json").write_text(
@@ -200,6 +243,19 @@ jobs:
           path: |
             cinavault-ios-v2-build-2-simulator.zip
             cinavault-ios-v2-build-2-simulator.sha256
+            contracts/v1/contract-manifest.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload unsigned iPhone device build
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cinavault-ios-v2-build-2-unsigned-device-${{ github.sha }}
+          path: |
+            artifacts/CinaVault-iOS-v2-Build-2-unsigned.ipa
+            artifacts/CinaVault-iOS-v2-Build-2-unsigned-xcarchive.zip
+            artifacts/CinaVault-iOS-v2-Build-2-unsigned.sha256
             contracts/v1/contract-manifest.json
           if-no-files-found: error
           retention-days: 30

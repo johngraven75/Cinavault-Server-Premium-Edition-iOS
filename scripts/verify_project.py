@@ -36,7 +36,17 @@ require_all(
 )
 require_all(
     "Podfile",
-    ["google-cast-sdk", "~> 4.8.4", "platform :ios, '17.0'"],
+    ["google-cast-sdk", "'4.8.4'", "platform :ios, '17.0'"],
+)
+require_all(
+    ".github/workflows/ci.yml",
+    [
+        "Build unsigned iPhone device archive and IPA",
+        "CODE_SIGNING_ALLOWED=NO",
+        "generic/platform=iOS",
+        "CinaVault-iOS-v2-Build-2-unsigned.ipa",
+        "unsignedDeviceArchive",
+    ],
 )
 info = require_all(
     "CinaVaultIOS/Info.plist",
