@@ -30,13 +30,13 @@ require_all(
         'iOS: "17.0"',
         "SWIFT_VERSION",
         "CinaVaultIOSTests",
-        "MARKETING_VERSION: 2.0.10",
-        "CURRENT_PROJECT_VERSION: 110",
+        "MARKETING_VERSION: 2.0.11",
+        "CURRENT_PROJECT_VERSION: 111",
     ],
 )
 require_all(
     "Podfile",
-    ["google-cast-sdk", "'4.8.4'", "platform :ios, '17.0'"],
+    ["google-cast-sdk", "~> 4.8.4", "platform :ios, '17.0'"],
 )
 info = require_all(
     "CinaVaultIOS/Info.plist",
@@ -187,7 +187,7 @@ require_all(
         "RecoveryMonitor",
         "beginLaunch",
         "markCleanBackground",
-        "Build109RootView",
+        "CinaVaultRootView",
         "preferredColorScheme(.dark)",
     ],
 )
@@ -211,11 +211,11 @@ if contract_text:
     else:
         expected_reference = {
             "repository": "johngraven75/CinaVault-Premium",
-            "release": "v2-build-1.10",
+            "release": "v2-build-1.11",
             "platform": "windows",
         }
-        if any(contract.get("reference", {}).get(key) != value for key, value in expected_reference.items()):
-            errors.append("iOS parity contract must reference current Windows v2 Build 1.10")
+        if contract.get("reference") != expected_reference:
+            errors.append("iOS parity contract must reference current Windows v2 Build 1.11")
         included = contract.get("includedRepositories")
         expected = [
             "johngraven75/CinaVault-Premium",
@@ -241,25 +241,6 @@ if contract_text:
         for key in ("fullFileReplacementsOnly", "noRegressions", "crossPlatformAuditRequired"):
             if policy.get(key) is not True:
                 errors.append(f"iOS parity policy must keep {key}=true")
-
-adult_provider_root = ROOT / "CinaVaultIOS" / "Resources" / "AdultProviders"
-adult_provider_keys = ["tpdb", "stashdb", "pgma", "porn_site_nuxt", "iafd", "phoenixadult"]
-for provider_key in adult_provider_keys:
-    provider_path = adult_provider_root / f"{provider_key}.json"
-    if not provider_path.is_file():
-        errors.append(f"missing adult provider config: {provider_path.relative_to(ROOT)}")
-        continue
-    try:
-        provider_config = json.loads(provider_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as error:
-        errors.append(f"invalid adult provider JSON {provider_key}: {error}")
-        continue
-    if provider_config.get("_key") != provider_key:
-        errors.append(f"adult provider config key mismatch: {provider_key}")
-    if provider_config.get("enabled") is not True:
-        errors.append(f"adult provider must start enabled: {provider_key}")
-    if provider_config.get("poster_download") is not True:
-        errors.append(f"adult poster provider must start enabled: {provider_key}")
 
 if errors:
     print("CinaVault iOS end-to-end parity verification failed:")

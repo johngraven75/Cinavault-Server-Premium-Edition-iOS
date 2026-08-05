@@ -23,8 +23,8 @@ targets:
         PRODUCT_NAME: CinaVault
         PRODUCT_MODULE_NAME: CinaVaultIOS
         INFOPLIST_FILE: CinaVaultIOS/Info.plist
-        MARKETING_VERSION: 2.0.10
-        CURRENT_PROJECT_VERSION: 110
+        MARKETING_VERSION: 2.0.11
+        CURRENT_PROJECT_VERSION: 111
         CODE_SIGN_STYLE: Automatic
         ENABLE_USER_SCRIPT_SANDBOXING: NO
         OTHER_LDFLAGS: "$(inherited) -ObjC -lc++"

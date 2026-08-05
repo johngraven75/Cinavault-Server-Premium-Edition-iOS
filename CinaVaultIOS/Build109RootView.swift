@@ -44,7 +44,7 @@ private struct Build109LoginView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("CinaVault Premium · v2.10 Build 1.10") {
+                Section("CinaVault Premium · v2.11 Build 1.11") {
                     TextField("Server URL", text: $endpoint)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
@@ -94,6 +94,10 @@ private struct Build109Shell: View {
                 .tabItem { Label("AI", systemImage: "sparkles") }
                 .tag(1)
 
+            Build111HFModelsView(model: model)
+                .tabItem { Label("HF Models", systemImage: "brain.head.profile") }
+                .tag(4)
+
             Build109SecurityView(model: model)
                 .tabItem { Label("Security", systemImage: "shield.lefthalf.filled") }
                 .tag(2)
@@ -117,6 +121,35 @@ private struct Build109Shell: View {
             Button("Close", role: .cancel) { model.clearError() }
         } message: {
             Text(model.errorMessage ?? "Unknown error")
+        }
+    }
+}
+
+private struct Build111HFModelsView: View {
+    @ObservedObject var model: CinaVaultModel
+    @State private var query = ""
+    private let models = [
+        "Qwen/Qwen3-4B-Instruct-2507",
+        "HuggingFaceTB/SmolLM3-3B",
+        "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+        "microsoft/Phi-3.5-mini-instruct",
+        "katanemo/Arch-Router-1.5B:hf-inference"
+    ]
+
+    var body: some View {
+        NavigationStack {
+            List(models.filter { query.isEmpty || $0.localizedCaseInsensitiveContains(query) }, id: \.self) { modelID in
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(modelID).font(.headline)
+                    Text("Free · Public · Ungated").font(.caption).foregroundStyle(.secondary)
+                    Link("Select / inspect model", destination: URL(string: "https://huggingface.co/\(modelID)")!)
+                }
+            }
+            .searchable(text: $query, prompt: "Search models")
+            .navigationTitle("Hugging Face Models")
+            .safeAreaInset(edge: .bottom) {
+                Text("HF token: \(model.hfTokenStatus)").font(.caption).padding(8).background(.ultraThinMaterial, in: Capsule())
+            }
         }
     }
 }
@@ -159,13 +192,6 @@ private struct Build109LibraryView: View {
 private struct Build109AIView: View {
     @ObservedObject var model: CinaVaultModel
     @State private var catalogQuery = ""
-    @State private var selectedFreeModel = "Qwen/Qwen3-4B-Instruct-2507"
-    private let freeModels = [
-        "Qwen/Qwen3-4B-Instruct-2507",
-        "HuggingFaceTB/SmolLM3-3B",
-        "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
-        "microsoft/Phi-3.5-mini-instruct"
-    ]
 
     private var catalogURL: URL? {
         var components = URLComponents(string: "https://huggingface.co/models")
@@ -207,18 +233,6 @@ private struct Build109AIView: View {
                     TextField("Model or publisher", text: $catalogQuery)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                    Text("Public ungated choices only. Reasoning-capable models are labeled.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Picker("Free model", selection: $selectedFreeModel) {
-                        ForEach(freeModels, id: \.self) { candidate in
-                            Text(candidate.contains("Qwen") || candidate.contains("SmolLM3") ? "Reasoning · \(candidate)" : candidate)
-                                .tag(candidate)
-                        }
-                    }
-                    Button("Use selected model") {
-                        catalogQuery = selectedFreeModel
-                    }
                     if let catalogURL {
                         Link(destination: catalogURL) {
                             Label("Open model catalog", systemImage: "magnifyingglass")
@@ -272,8 +286,8 @@ private struct Build109SettingsView: View {
         NavigationStack {
             Form {
                 Section("Build") {
-                    LabeledContent("Release", value: "v2.10 Build 1.10")
-                    LabeledContent("Version", value: "2.0.10 (110)")
+                    LabeledContent("Release", value: "v2.11 Build 1.11")
+                    LabeledContent("Version", value: "2.0.11 (111)")
                 }
                 Section("Automation") {
                     Toggle("Automatic refresh", isOn: Binding(
