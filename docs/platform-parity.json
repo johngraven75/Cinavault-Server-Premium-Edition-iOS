@@ -3,10 +3,10 @@
   "contractId": "cinavault-platform-parity-v1",
   "reference": {
     "repository": "johngraven75/CinaVault-Premium",
-    "release": "v2-build-1.09",
+    "release": "v2-build-1.10",
     "platform": "windows",
-    "displayName": "v2.09 Build 1.09",
-    "semanticVersion": "2.0.9"
+    "displayName": "v2.10 Build 1.10",
+    "semanticVersion": "2.0.10"
   },
   "includedRepositories": [
     "johngraven75/CinaVault-Premium",
@@ -111,7 +111,11 @@
     "reduced-motion-support",
     "adult-media-classification",
     "adult-provider-exclusive-routing",
-    "installed-adult-provider-json-configs"
+    "installed-adult-provider-json-configs",
+    "native-source-picker",
+    "hf-free-model-selection",
+    "authorized-poster-delivery",
+    "explicit-adult-source-classification"
   ],
   "visualContract": {
     "designSystem": "CinaVault spatial command environment",

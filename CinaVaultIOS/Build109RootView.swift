@@ -44,7 +44,7 @@ private struct Build109LoginView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("CinaVault Premium · v2.09 Build 1.09") {
+                Section("CinaVault Premium · v2.10 Build 1.10") {
                     TextField("Server URL", text: $endpoint)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
@@ -159,6 +159,13 @@ private struct Build109LibraryView: View {
 private struct Build109AIView: View {
     @ObservedObject var model: CinaVaultModel
     @State private var catalogQuery = ""
+    @State private var selectedFreeModel = "Qwen/Qwen3-4B-Instruct-2507"
+    private let freeModels = [
+        "Qwen/Qwen3-4B-Instruct-2507",
+        "HuggingFaceTB/SmolLM3-3B",
+        "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+        "microsoft/Phi-3.5-mini-instruct"
+    ]
 
     private var catalogURL: URL? {
         var components = URLComponents(string: "https://huggingface.co/models")
@@ -200,6 +207,18 @@ private struct Build109AIView: View {
                     TextField("Model or publisher", text: $catalogQuery)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
+                    Text("Public ungated choices only. Reasoning-capable models are labeled.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Picker("Free model", selection: $selectedFreeModel) {
+                        ForEach(freeModels, id: \.self) { candidate in
+                            Text(candidate.contains("Qwen") || candidate.contains("SmolLM3") ? "Reasoning · \(candidate)" : candidate)
+                                .tag(candidate)
+                        }
+                    }
+                    Button("Use selected model") {
+                        catalogQuery = selectedFreeModel
+                    }
                     if let catalogURL {
                         Link(destination: catalogURL) {
                             Label("Open model catalog", systemImage: "magnifyingglass")
@@ -253,8 +272,8 @@ private struct Build109SettingsView: View {
         NavigationStack {
             Form {
                 Section("Build") {
-                    LabeledContent("Release", value: "v2.09 Build 1.09")
-                    LabeledContent("Version", value: "2.0.9 (109)")
+                    LabeledContent("Release", value: "v2.10 Build 1.10")
+                    LabeledContent("Version", value: "2.0.10 (110)")
                 }
                 Section("Automation") {
                     Toggle("Automatic refresh", isOn: Binding(
