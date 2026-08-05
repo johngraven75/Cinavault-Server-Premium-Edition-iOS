@@ -4,7 +4,9 @@ use_frameworks! :linkage => :static
 install! 'cocoapods', :deterministic_uuids => true
 
 target 'CinaVaultIOS' do
-  pod 'google-cast-sdk', '~> 4.8.4'
+  # Pin exactly: 4.8.6 references UIGlassEffect, which is unavailable to the
+  # Xcode 16.4 / iOS 18.5 release archive linker used by CI.
+  pod 'google-cast-sdk', '4.8.4'
 end
 
 post_install do |installer|
