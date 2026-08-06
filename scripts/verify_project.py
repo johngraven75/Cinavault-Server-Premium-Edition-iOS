@@ -30,13 +30,13 @@ require_all(
         'iOS: "17.0"',
         "SWIFT_VERSION",
         "CinaVaultIOSTests",
-        "MARKETING_VERSION: 2.0.11",
-        "CURRENT_PROJECT_VERSION: 111",
+        "MARKETING_VERSION: 2.0.12",
+        "CURRENT_PROJECT_VERSION: 112",
     ],
 )
 require_all(
     "Podfile",
-    ["google-cast-sdk", "~> 4.8.4", "platform :ios, '17.0'"],
+    ["google-cast-sdk", "'4.8.4'", "platform :ios, '17.0'"],
 )
 info = require_all(
     "CinaVaultIOS/Info.plist",
@@ -187,7 +187,7 @@ require_all(
         "RecoveryMonitor",
         "beginLaunch",
         "markCleanBackground",
-        "CinaVaultRootView",
+        "Build109RootView",
         "preferredColorScheme(.dark)",
     ],
 )
@@ -211,11 +211,11 @@ if contract_text:
     else:
         expected_reference = {
             "repository": "johngraven75/CinaVault-Premium",
-            "release": "v2-build-1.11",
+            "release": "v2-build-1.12",
             "platform": "windows",
         }
         if contract.get("reference") != expected_reference:
-            errors.append("iOS parity contract must reference current Windows v2 Build 1.11")
+            errors.append("iOS parity contract must reference current Windows v2 Build 1.12")
         included = contract.get("includedRepositories")
         expected = [
             "johngraven75/CinaVault-Premium",
