@@ -44,7 +44,7 @@ private struct Build109LoginView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("CinaVault Premium · v2.11 Build 1.11") {
+                Section("CinaVault Premium · v2.12 Build 1.12") {
                     TextField("Server URL", text: $endpoint)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
@@ -286,8 +286,8 @@ private struct Build109SettingsView: View {
         NavigationStack {
             Form {
                 Section("Build") {
-                    LabeledContent("Release", value: "v2.11 Build 1.11")
-                    LabeledContent("Version", value: "2.0.11 (111)")
+                    LabeledContent("Release", value: "v2.12 Build 1.12")
+                    LabeledContent("Version", value: "2.0.12 (112)")
                 }
                 Section("Automation") {
                     Toggle("Automatic refresh", isOn: Binding(
