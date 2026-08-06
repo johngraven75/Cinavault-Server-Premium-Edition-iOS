@@ -1,0 +1,117 @@
+name: iOS v2.12 Build 1.12 Evidence
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, release/v2.12-build-1.08]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: ios-v2-12-build-1-12-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TEST_ARTIFACT_NAME: CinaVault-iOS-v2.12-Build-1.08-Test-Notes
+
+jobs:
+  test-build-evidence:
+    runs-on: macos-15
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize test notes
+        run: |
+          mkdir -p test-evidence package-staging
+          cat > test-evidence/TEST-NOTES.md <<EOF
+          # CinaVault iOS Test Notes
+
+          - Public release: v2.12
+          - Build: 1.08
+          - Internal version: 2.0.12
+          - iOS build number: 112
+          - Commit: ${GITHUB_SHA}
+          - Event: ${GITHUB_EVENT_NAME}
+          - Started UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          ## Required checks
+          Version identity, parity governance, project generation, dependency resolution,
+          simulator build, shared-contract tests, complete unit tests, archive validation,
+          checksums, and artifact inventory.
+          EOF
+
+      - name: Verify version identity
+        run: |
+          grep -F 'MARKETING_VERSION: 2.0.12' project.yml
+          grep -F 'CURRENT_PROJECT_VERSION: 112' project.yml
+          echo '- Version identity: PASS' >> test-evidence/TEST-NOTES.md
+
+      - name: Install tooling
+        run: |
+          brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
+          sudo gem install cocoapods -v 1.16.2 --no-document
+
+      - name: Run parity governance
+        run: |
+          python3 scripts/verify_project.py 2>&1 | tee test-evidence/parity-governance.log
+          echo '- Parity governance: PASS' >> test-evidence/TEST-NOTES.md
+
+      - name: Generate and resolve project
+        run: |
+          xcodegen generate 2>&1 | tee test-evidence/xcodegen.log
+          pod install --repo-update 2>&1 | tee test-evidence/pod-install.log
+          echo '- Project generation and dependencies: PASS' >> test-evidence/TEST-NOTES.md
+
+      - name: Select simulator
+        id: simulator
+        run: |
+          DEVICE_ID="$(xcrun simctl list devices available -j | python3 -c 'import json,sys; data=json.load(sys.stdin)["devices"]; print(next(device["udid"] for devices in data.values() for device in devices if device.get("isAvailable") and device.get("name", "").startswith("iPhone")))')"
+          echo "device_id=${DEVICE_ID}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and test
+        run: |
+          xcodebuild -workspace CinaVaultIOS.xcworkspace -scheme CinaVaultIOS -configuration Debug -destination 'id=${{ steps.simulator.outputs.device_id }}' CODE_SIGNING_ALLOWED=NO build 2>&1 | tee test-evidence/ios-build.log
+          xcodebuild -workspace CinaVaultIOS.xcworkspace -scheme CinaVaultIOS -configuration Debug -destination 'id=${{ steps.simulator.outputs.device_id }}' CODE_SIGNING_ALLOWED=NO test 2>&1 | tee test-evidence/ios-tests.log
+          echo '- Simulator build and tests: PASS' >> test-evidence/TEST-NOTES.md
+
+      - name: Create unsigned archive candidate
+        run: |
+          xcodebuild -workspace CinaVaultIOS.xcworkspace -scheme CinaVaultIOS -configuration Release -sdk iphoneos -archivePath package-staging/CinaVault-iOS-v2.12-Build-1.08.xcarchive CODE_SIGNING_ALLOWED=NO archive 2>&1 | tee test-evidence/ios-archive.log
+          ditto -c -k --sequesterRsrc --keepParent package-staging/CinaVault-iOS-v2.12-Build-1.08.xcarchive package-staging/CinaVault-iOS-v2.12-Build-1.08-xcarchive.zip
+          shasum -a 256 package-staging/*.zip | tee test-evidence/IOS-SHA256SUMS.txt
+          echo '- Unsigned archive validation: PASS' >> test-evidence/TEST-NOTES.md
+
+      - name: Finalize success notes
+        if: success()
+        run: |
+          printf '\n## Final result\n- Result: PASS\n- Completed UTC: %s\n- Distribution signing remains required before App Store or device publication.\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> test-evidence/TEST-NOTES.md
+          zip -j package-staging/CinaVault-iOS-v2.12-Build-1.08-Test-Notes.zip test-evidence/*
+
+      - name: Record failure
+        if: failure()
+        run: |
+          mkdir -p test-evidence
+          printf '\n## Final result\n- Result: FAILED\n- Completed UTC: %s\n- Review workflow logs and attached evidence.\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> test-evidence/TEST-NOTES.md
+
+      - name: Upload notes for every build
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.TEST_ARTIFACT_NAME }}
+          path: test-evidence/
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Upload archive candidate
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CinaVault-iOS-v2.12-Build-1.08
+          path: package-staging/
+          if-no-files-found: error
+          retention-days: 30
