@@ -1,10 +1,10 @@
-name: iOS v2.08 Build 1.08 Evidence
+name: iOS v2.12 Build 1.12 Evidence
 
 on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, release/v2.08-build-1.08]
+    branches: [main, release/v2.12-build-1.08]
   workflow_dispatch:
 
 permissions:
@@ -12,11 +12,11 @@ permissions:
   actions: read
 
 concurrency:
-  group: ios-v2-08-build-1-08-${{ github.ref }}
+  group: ios-v2-12-build-1-12-${{ github.ref }}
   cancel-in-progress: true
 
 env:
-  TEST_ARTIFACT_NAME: CinaVault-iOS-v2.08-Build-1.08-Test-Notes
+  TEST_ARTIFACT_NAME: CinaVault-iOS-v2.12-Build-1.08-Test-Notes
 
 jobs:
   test-build-evidence:
@@ -31,10 +31,10 @@ jobs:
           cat > test-evidence/TEST-NOTES.md <<EOF
           # CinaVault iOS Test Notes
 
-          - Public release: v2.08
+          - Public release: v2.12
           - Build: 1.08
-          - Internal version: 2.0.8
-          - iOS build number: 108
+          - Internal version: 2.0.12
+          - iOS build number: 112
           - Commit: ${GITHUB_SHA}
           - Event: ${GITHUB_EVENT_NAME}
           - Started UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -47,8 +47,8 @@ jobs:
 
       - name: Verify version identity
         run: |
-          grep -F 'MARKETING_VERSION: 2.0.8' project.yml
-          grep -F 'CURRENT_PROJECT_VERSION: 108' project.yml
+          grep -F 'MARKETING_VERSION: 2.0.12' project.yml
+          grep -F 'CURRENT_PROJECT_VERSION: 112' project.yml
           echo '- Version identity: PASS' >> test-evidence/TEST-NOTES.md
 
       - name: Install tooling
@@ -81,8 +81,8 @@ jobs:
 
       - name: Create unsigned archive candidate
         run: |
-          xcodebuild -workspace CinaVaultIOS.xcworkspace -scheme CinaVaultIOS -configuration Release -sdk iphoneos -archivePath package-staging/CinaVault-iOS-v2.08-Build-1.08.xcarchive CODE_SIGNING_ALLOWED=NO archive 2>&1 | tee test-evidence/ios-archive.log
-          ditto -c -k --sequesterRsrc --keepParent package-staging/CinaVault-iOS-v2.08-Build-1.08.xcarchive package-staging/CinaVault-iOS-v2.08-Build-1.08-xcarchive.zip
+          xcodebuild -workspace CinaVaultIOS.xcworkspace -scheme CinaVaultIOS -configuration Release -sdk iphoneos -archivePath package-staging/CinaVault-iOS-v2.12-Build-1.08.xcarchive CODE_SIGNING_ALLOWED=NO archive 2>&1 | tee test-evidence/ios-archive.log
+          ditto -c -k --sequesterRsrc --keepParent package-staging/CinaVault-iOS-v2.12-Build-1.08.xcarchive package-staging/CinaVault-iOS-v2.12-Build-1.08-xcarchive.zip
           shasum -a 256 package-staging/*.zip | tee test-evidence/IOS-SHA256SUMS.txt
           echo '- Unsigned archive validation: PASS' >> test-evidence/TEST-NOTES.md
 
@@ -90,7 +90,7 @@ jobs:
         if: success()
         run: |
           printf '\n## Final result\n- Result: PASS\n- Completed UTC: %s\n- Distribution signing remains required before App Store or device publication.\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> test-evidence/TEST-NOTES.md
-          zip -j package-staging/CinaVault-iOS-v2.08-Build-1.08-Test-Notes.zip test-evidence/*
+          zip -j package-staging/CinaVault-iOS-v2.12-Build-1.08-Test-Notes.zip test-evidence/*
 
       - name: Record failure
         if: failure()
@@ -111,7 +111,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: CinaVault-iOS-v2.08-Build-1.08
+          name: CinaVault-iOS-v2.12-Build-1.08
           path: package-staging/
           if-no-files-found: error
           retention-days: 30
