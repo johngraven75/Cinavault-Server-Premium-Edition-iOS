@@ -115,3 +115,21 @@ jobs:
           path: package-staging/
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish iOS v2.12 Build 1.12 validation release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v2.0.12-ios
+          target_commitish: ${{ github.sha }}
+          name: CinaVault iOS v2.12 Build 1.12 (unsigned validation)
+          prerelease: true
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          body: |
+            This GitHub prerelease contains the verified unsigned iOS archive and test evidence.
+            Apple distribution signing is still required before App Store or physical-device installation.
+          files: |
+            package-staging/CinaVault-iOS-v2.12-Build-1.12-xcarchive.zip
+            package-staging/CinaVault-iOS-v2.12-Build-1.12-Test-Notes.zip
+            test-evidence/IOS-SHA256SUMS.txt
