@@ -149,8 +149,8 @@ jobs:
           test -n "$APP_PATH"
           test -f "$APP_PATH/CinaVault"
           du -sh "$APP_PATH"
-          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" cinavault-ios-v2-build-2-simulator.zip
-          shasum -a 256 cinavault-ios-v2-build-2-simulator.zip > cinavault-ios-v2-build-2-simulator.sha256
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" CinaVault-iOS-v2.13-Build-1.13-Simulator-TEST.zip
+          shasum -a 256 CinaVault-iOS-v2.13-Build-1.13-Simulator-TEST.zip > CinaVault-iOS-v2.13-Build-1.13-Simulator-TEST.sha256
 
       - name: Write iOS evidence summary
         if: always()
@@ -196,10 +196,10 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: cinavault-ios-v2-build-2-simulator-${{ github.sha }}
+          name: CinaVault-iOS-v2.13-Build-1.13-Simulator-TEST-${{ github.sha }}
           path: |
-            cinavault-ios-v2-build-2-simulator.zip
-            cinavault-ios-v2-build-2-simulator.sha256
+            CinaVault-iOS-v2.13-Build-1.13-Simulator-TEST.zip
+            CinaVault-iOS-v2.13-Build-1.13-Simulator-TEST.sha256
             contracts/v1/contract-manifest.json
           if-no-files-found: error
           retention-days: 30
