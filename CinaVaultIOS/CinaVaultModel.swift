@@ -9,6 +9,12 @@ struct ClientPreferences: Codable, Equatable {
     var preferAirPlay = true
 }
 
+struct ArtworkRequestIdentity: Hashable {
+    let mediaKey: String
+    let artworkPath: String?
+    let refreshRevision: UInt64
+}
+
 @MainActor
 final class CinaVaultModel: ObservableObject {
     @Published private(set) var session: RemoteSession?
@@ -33,6 +39,7 @@ final class CinaVaultModel: ObservableObject {
     @Published var commandPaletteOpen = false
     @Published var preferences: ClientPreferences
     @Published private(set) var lastRefreshDate: Date?
+    @Published private(set) var artworkRefreshRevision: UInt64 = 0
 
     private let api = CinaVaultAPI()
     private let keychain = KeychainSessionStore()
@@ -107,6 +114,7 @@ final class CinaVaultModel: ObservableObject {
         session = nil
         serverInfo = nil
         library = []
+        artworkRefreshRevision &+= 1
         controlSnapshot = .unavailable("Sign in to synchronize controls.")
         selectedMedia = nil
         setDestination(.library)
@@ -146,6 +154,7 @@ final class CinaVaultModel: ObservableObject {
             self.serverInfo = serverInfo
             let refreshedLibrary = preferences.aiAutopilotEnabled ? smartSort(mediaItems) : mediaItems
             library = refreshedLibrary
+            artworkRefreshRevision &+= 1
             if let selected = selectedMedia {
                 selectedMedia = refreshedLibrary.first { $0.mediaKey == selected.mediaKey } ?? selected
             }

@@ -582,7 +582,11 @@ private struct AuthenticatedArtwork: View {
             }
         }
         .clipped()
-        .task(id: item.mediaKey) {
+        .task(id: ArtworkRequestIdentity(
+            mediaKey: item.mediaKey,
+            artworkPath: item.artworkUrl,
+            refreshRevision: model.artworkRefreshRevision
+        )) {
             image = nil
             guard let data = try? await model.artworkData(for: item) else { return }
             image = UIImage(data: data)

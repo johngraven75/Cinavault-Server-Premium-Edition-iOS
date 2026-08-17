@@ -64,4 +64,19 @@ final class ParityTests: XCTestCase {
         XCTAssertFalse(item.streamUrl.contains("C:\\"))
         XCTAssertFalse(item.streamUrl.contains("/Users/"))
     }
+
+    func testArtworkRequestIdentityChangesAfterLibraryRefresh() {
+        let before = ArtworkRequestIdentity(
+            mediaKey: "opaque-key",
+            artworkPath: "/api/artwork/opaque-key",
+            refreshRevision: 9
+        )
+        let after = ArtworkRequestIdentity(
+            mediaKey: "opaque-key",
+            artworkPath: "/api/artwork/opaque-key",
+            refreshRevision: 10
+        )
+
+        XCTAssertNotEqual(before, after)
+    }
 }
