@@ -11,6 +11,7 @@ on:
       - "project.yml"
       - "Podfile"
       - "Podfile.lock"
+      - "scripts/verify_project.py"
       - "RELEASE_NOTES_BUILD171.md"
       - ".github/workflows/lumasift-build171-test-release.yml"
   workflow_dispatch:
