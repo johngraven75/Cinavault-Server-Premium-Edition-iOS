@@ -319,8 +319,6 @@ private func DestinationView(model: CinaVaultModel, castCoordinator: CastCoordin
         CastingView(model: model, castCoordinator: castCoordinator)
     case .intelligence:
         IntelligenceView(model: model)
-    case .lumaSift:
-        LumaSiftView(model: model)
     case .settings:
         SettingsView(model: model)
     case .remote:

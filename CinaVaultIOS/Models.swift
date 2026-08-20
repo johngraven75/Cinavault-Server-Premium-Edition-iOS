@@ -67,90 +67,6 @@ struct ControlSection: Codable, Identifiable, Hashable {
     let actions: [ControlAction]
 }
 
-struct LumaSiftProgress: Codable, Equatable {
-    let scanning: Bool
-    let phase: String
-    let current: UInt64
-    let total: UInt64
-    let percentage: Int
-    let currentDisplayName: String?
-    let filesConsidered: UInt64
-    let message: String
-    let error: String?
-
-    static let ready = LumaSiftProgress(
-        scanning: false,
-        phase: "Ready",
-        current: 0,
-        total: 0,
-        percentage: 0,
-        currentDisplayName: nil,
-        filesConsidered: 0,
-        message: "Build a read-only exact-duplicate plan from the connected Windows host.",
-        error: nil
-    )
-}
-
-struct LumaSiftQuality: Codable, Equatable {
-    let pixelCount: UInt64
-    let bitrate: UInt64?
-    let bitDepth: UInt64?
-    let durationMillis: UInt64?
-    let fileSizeBytes: UInt64
-    let reasons: [String]
-
-    enum CodingKeys: String, CodingKey {
-        case pixelCount = "pixel_count"
-        case bitrate
-        case bitDepth = "bit_depth"
-        case durationMillis = "duration_millis"
-        case fileSizeBytes = "file_size_bytes"
-        case reasons
-    }
-}
-
-struct LumaSiftCandidate: Codable, Identifiable, Equatable {
-    let id: String
-    let displayName: String
-    let mediaKind: String
-    let qualityScore: UInt64
-    let quality: LumaSiftQuality
-    let disposition: String
-    let dispositionDetail: String
-    let quarantined: Bool
-}
-
-struct LumaSiftGroup: Codable, Identifiable, Equatable {
-    let id: String
-    let winnerId: String
-    let reclaimableBytes: UInt64
-    let candidates: [LumaSiftCandidate]
-}
-
-struct LumaSiftDisposition: Codable, Identifiable, Equatable {
-    let occurredAt: String
-    let displayName: String
-    let disposition: String
-    let detail: String
-
-    var id: String { "\(occurredAt)|\(displayName)|\(disposition)" }
-}
-
-struct LumaSiftPlan: Codable, Equatable {
-    let id: String
-    let status: String
-    let createdAt: String
-    let groups: [LumaSiftGroup]
-    let reclaimableBytes: UInt64
-    let queuedFileCount: UInt64
-    let dispositions: [LumaSiftDisposition]
-}
-
-struct LumaSiftPlanEnvelope: Codable, Equatable {
-    let plan: LumaSiftPlan?
-    let localPathsExposed: Bool
-}
-
 struct ControlSnapshot: Codable, Equatable {
     let available: Bool
     let generatedAt: String
@@ -180,7 +96,6 @@ struct CastGrant: Codable, Equatable {
 enum AppDestination: String, CaseIterable, Identifiable, Codable {
     case library
     case sources
-    case lumaSift = "lumasift"
     case downloads
     case liveTV = "live-tv"
     case server
@@ -200,7 +115,6 @@ enum AppDestination: String, CaseIterable, Identifiable, Codable {
     static let primary: [AppDestination] = [
         .library,
         .sources,
-        .lumaSift,
         .downloads,
         .liveTV,
         .server,
@@ -216,8 +130,7 @@ enum AppDestination: String, CaseIterable, Identifiable, Codable {
     static let compact: [AppDestination] = [
         .library,
         .sources,
-        .lumaSift,
-        .intelligence,
+        .remote,
         .intelligence,
         .settings,
     ]
@@ -226,7 +139,6 @@ enum AppDestination: String, CaseIterable, Identifiable, Codable {
         switch self {
         case .library: "Library"
         case .sources: "Media Sources"
-        case .lumaSift: "LumaSift"
         case .downloads: "Downloads"
         case .liveTV: "Live TV"
         case .server: "Server Core"
@@ -246,7 +158,6 @@ enum AppDestination: String, CaseIterable, Identifiable, Codable {
         switch self {
         case .library: "Vault"
         case .sources: "Sources"
-        case .lumaSift: "LumaSift"
         case .downloads: "Queue"
         case .liveTV: "Live"
         case .server: "Server"
@@ -266,7 +177,6 @@ enum AppDestination: String, CaseIterable, Identifiable, Codable {
         switch self {
         case .library: "CINEMATIC LIBRARY"
         case .sources: "AUTONOMOUS INGESTION"
-        case .lumaSift: "EXACT MEDIA RESOLUTION"
         case .downloads: "ACQUISITION STREAM"
         case .liveTV: "BROADCAST FABRIC"
         case .server: "EMBEDDED MEDIA CORE"
@@ -286,7 +196,6 @@ enum AppDestination: String, CaseIterable, Identifiable, Codable {
         switch self {
         case .library: "The Vault"
         case .sources: "Source Constellation"
-        case .lumaSift: "LumaSift"
         case .downloads: "Incoming Media"
         case .liveTV: "Live Signal"
         case .server: "Server Nexus"
@@ -306,7 +215,6 @@ enum AppDestination: String, CaseIterable, Identifiable, Codable {
         switch self {
         case .library: "square.grid.3x3.fill"
         case .sources: "folder.fill"
-        case .lumaSift: "sparkles.rectangle.stack.fill"
         case .downloads: "arrow.down.circle.fill"
         case .liveTV: "tv.fill"
         case .server: "server.rack"

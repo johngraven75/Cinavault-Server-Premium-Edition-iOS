@@ -56,18 +56,6 @@ actor CinaVaultAPI {
         let actionId: String
     }
 
-    private struct LumaSiftPlanBody: Encodable {
-        let planId: String
-    }
-
-    private struct LumaSiftStartBody: Encodable {
-        let selectedTypes: [String]
-    }
-
-    private struct ActionResponse: Decodable {
-        let message: String
-    }
-
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
     private let urlSession: URLSession
@@ -136,49 +124,6 @@ actor CinaVaultAPI {
         )
     }
 
-    func loadLumaSiftProgress(session: RemoteSession) async throws -> LumaSiftProgress {
-        try await request(
-            baseURL: session.endpoint,
-            path: "/api/lumasift/status",
-            method: "GET",
-            token: session.token,
-            body: Optional<String>.none
-        )
-    }
-
-    func loadLumaSiftPlan(session: RemoteSession) async throws -> LumaSiftPlan? {
-        let envelope: LumaSiftPlanEnvelope = try await request(
-            baseURL: session.endpoint,
-            path: "/api/lumasift/plan",
-            method: "GET",
-            token: session.token,
-            body: Optional<String>.none
-        )
-        return envelope.plan
-    }
-
-    func startLumaSift(session: RemoteSession, selectedTypes: [String]) async throws -> String {
-        let response: ActionResponse = try await request(
-            baseURL: session.endpoint,
-            path: "/api/lumasift/start",
-            method: "POST",
-            token: session.token,
-            body: LumaSiftStartBody(selectedTypes: selectedTypes)
-        )
-        return response.message
-    }
-
-    func applyLumaSiftPlan(session: RemoteSession, planID: String) async throws -> String {
-        let response: ActionResponse = try await request(
-            baseURL: session.endpoint,
-            path: "/api/lumasift/plan/apply",
-            method: "POST",
-            token: session.token,
-            body: LumaSiftPlanBody(planId: planID)
-        )
-        return response.message
-    }
-
     func loadLibrary(session: RemoteSession) async throws -> [MediaItem] {
         try await request(
             baseURL: session.endpoint,
@@ -200,6 +145,7 @@ actor CinaVaultAPI {
     }
 
     func runControlAction(session: RemoteSession, actionID: String) async throws -> String {
+        struct ActionResponse: Decodable { let message: String }
         let response: ActionResponse = try await request(
             baseURL: session.endpoint,
             path: "/api/control/action",

@@ -23,8 +23,6 @@ final class CinaVaultModel: ObservableObject {
     @Published private(set) var controlSnapshot = ControlSnapshot.unavailable(
         "The server has not synchronized mobile controls yet."
     )
-    @Published private(set) var lumaSiftProgress = LumaSiftProgress.ready
-    @Published private(set) var lumaSiftPlan: LumaSiftPlan?
 
     // SwiftUI's global @ViewBuilder router is evaluated from a nonisolated helper.
     // Reads are safe because all mutations remain confined to setDestination(_:) on MainActor.
@@ -118,8 +116,6 @@ final class CinaVaultModel: ObservableObject {
         library = []
         artworkRefreshRevision &+= 1
         controlSnapshot = .unavailable("Sign in to synchronize controls.")
-        lumaSiftProgress = .ready
-        lumaSiftPlan = nil
         selectedMedia = nil
         setDestination(.library)
         statusMessage = "Signed out"
@@ -174,64 +170,6 @@ final class CinaVaultModel: ObservableObject {
             loading = false
             errorMessage = error.localizedDescription
             statusMessage = "Remote synchronization needs attention"
-        }
-    }
-
-    func refreshLumaSift() {
-        guard let session else { return }
-        Task {
-            do {
-                async let progressRequest = api.loadLumaSiftProgress(session: session)
-                async let planRequest = api.loadLumaSiftPlan(session: session)
-                let (progress, plan) = try await (progressRequest, planRequest)
-                lumaSiftProgress = progress
-                lumaSiftPlan = plan
-                statusMessage = progress.message
-            } catch {
-                errorMessage = error.localizedDescription
-                statusMessage = "LumaSift needs attention"
-            }
-        }
-    }
-
-    func startLumaSift(selectedTypes: [String]) {
-        guard let session, runningControlAction == nil else { return }
-        guard !selectedTypes.isEmpty else {
-            errorMessage = "Choose at least one LumaSift file type before starting a scan."
-            return
-        }
-        runningControlAction = "lumasift.start"
-        errorMessage = nil
-        statusMessage = "LumaSift is preparing a read-only exact-duplicate plan"
-        Task {
-            do {
-                statusMessage = try await api.startLumaSift(session: session, selectedTypes: selectedTypes)
-                runningControlAction = nil
-                refreshLumaSift()
-            } catch {
-                runningControlAction = nil
-                errorMessage = error.localizedDescription
-                statusMessage = "LumaSift needs attention"
-            }
-        }
-    }
-
-    func applyLumaSiftPlan(_ planID: String) {
-        guard let session, runningControlAction == nil, !planID.isEmpty else { return }
-        runningControlAction = "lumasift.apply"
-        errorMessage = nil
-        statusMessage = "LumaSift is revalidating and moving approved files to quarantine"
-        Task {
-            do {
-                statusMessage = try await api.applyLumaSiftPlan(session: session, planID: planID)
-                runningControlAction = nil
-                refreshLumaSift()
-                await refresh()
-            } catch {
-                runningControlAction = nil
-                errorMessage = error.localizedDescription
-                statusMessage = "LumaSift needs attention"
-            }
         }
     }
 

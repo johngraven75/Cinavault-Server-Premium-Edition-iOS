@@ -30,34 +30,10 @@ require_all(
         'iOS: "17.0"',
         "SWIFT_VERSION",
         "CinaVaultIOSTests",
-        "MARKETING_VERSION: 2.0.14",
-        "CURRENT_PROJECT_VERSION: 171",
+        "MARKETING_VERSION: 2.0.13",
+        "CURRENT_PROJECT_VERSION: 113",
     ],
 )
-require_all(
-    "CinaVaultIOS/Assets.xcassets/AppIcon.appiconset/Contents.json",
-    [
-        '"ios-marketing"',
-        '"Icon-1024.png"',
-        '"60x60"',
-        '"3x"',
-    ],
-)
-for icon_filename in (
-    "Icon-20@2x.png",
-    "Icon-20@3x.png",
-    "Icon-29@2x.png",
-    "Icon-29@3x.png",
-    "Icon-40@2x.png",
-    "Icon-40@3x.png",
-    "Icon-60@2x.png",
-    "Icon-60@3x.png",
-    "Icon-1024.png",
-):
-    icon_path = ROOT / "CinaVaultIOS/Assets.xcassets/AppIcon.appiconset" / icon_filename
-    if not icon_path.is_file():
-        errors.append(f"missing iOS AppIcon variant: {icon_filename}")
-
 require_all(
     "Podfile",
     ["google-cast-sdk", "'4.8.4'", "platform :ios, '17.0'"],
