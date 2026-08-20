@@ -8,6 +8,7 @@ final class ParityTests: XCTestCase {
             [
                 "library",
                 "sources",
+                "lumasift",
                 "downloads",
                 "live-tv",
                 "server",
