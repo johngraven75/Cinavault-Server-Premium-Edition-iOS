@@ -1,10 +1,8 @@
 name: iOS v2.13 Build 1.13 Simulator TEST
 
+# Historical v2.13 evidence workflow. Current releases are published by
+# lumasift-build171-test-release.yml and later versioned workflows.
 on:
-  pull_request:
-    branches: [main]
-  push:
-    branches: [main, release/v2.13-build-1.13]
   workflow_dispatch:
 
 permissions:
