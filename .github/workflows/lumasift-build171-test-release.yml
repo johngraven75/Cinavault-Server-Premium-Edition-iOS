@@ -1,0 +1,138 @@
+name: LumaSift Build 171 iOS Simulator TEST Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "CinaVaultIOS/**"
+      - "CinaVaultIOSTests/**"
+      - "contracts/**"
+      - "docs/platform-parity.json"
+      - "project.yml"
+      - "Podfile"
+      - "Podfile.lock"
+      - "RELEASE_NOTES_BUILD171.md"
+      - ".github/workflows/lumasift-build171-test-release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: lumasift-build-171-ios-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  APP_VERSION: "2.0.14"
+  BUILD_NUMBER: "171"
+  RELEASE_TAG: "v2.0.14-ios-test"
+  ARTIFACT_NAME: "LumaSift-Build171-iOS-Simulator-TEST"
+
+jobs:
+  validate-package-publish:
+    name: Validate, package, and publish iOS Simulator TEST release
+    runs-on: macos-15
+    timeout-minutes: 90
+    steps:
+      - name: Checkout current release commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Verify Build 171 release identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F "MARKETING_VERSION: ${APP_VERSION}" project.yml
+          grep -F "CURRENT_PROJECT_VERSION: ${BUILD_NUMBER}" project.yml
+          test -f RELEASE_NOTES_BUILD171.md
+
+      - name: Install project tooling
+        shell: bash
+        run: |
+          set -euo pipefail
+          brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
+          sudo gem install cocoapods -v 1.16.2 --no-document
+
+      - name: Run parity governance
+        shell: bash
+        run: python3 scripts/verify_project.py
+
+      - name: Generate workspace and resolve dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodegen generate
+          pod install --repo-update
+
+      - name: Select an available iPhone simulator
+        id: simulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEVICE_ID="$(xcrun simctl list devices available -j | python3 -c 'import json,sys; data=json.load(sys.stdin)["devices"]; print(next(d["udid"] for devices in data.values() for d in devices if d.get("isAvailable") and d.get("name", "").startswith("iPhone")))')"
+          printf 'device_id=%s\n' "$DEVICE_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Build and test iOS Simulator application
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -workspace CinaVaultIOS.xcworkspace -scheme CinaVaultIOS -configuration Debug -destination 'id=${{ steps.simulator.outputs.device_id }}' CODE_SIGNING_ALLOWED=NO build
+          xcodebuild -workspace CinaVaultIOS.xcworkspace -scheme CinaVaultIOS -configuration Debug -destination 'id=${{ steps.simulator.outputs.device_id }}' CODE_SIGNING_ALLOWED=NO test
+
+      - name: Stage Simulator TEST package and unsigned archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets test-evidence
+          APP_PATH="$(find "$HOME/Library/Developer/Xcode/DerivedData" -path '*/Build/Products/Debug-iphonesimulator/CinaVault.app' -type d -print -quit)"
+          test -n "$APP_PATH"
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" release-assets/LumaSift-iOS-v2.0.14-Build171-Simulator-TEST.zip
+          xcodebuild -workspace CinaVaultIOS.xcworkspace -scheme CinaVaultIOS -configuration Release -sdk iphoneos -archivePath release-assets/LumaSift-iOS-v2.0.14-Build171.xcarchive CODE_SIGNING_ALLOWED=NO archive
+          ditto -c -k --sequesterRsrc --keepParent release-assets/LumaSift-iOS-v2.0.14-Build171.xcarchive release-assets/LumaSift-iOS-v2.0.14-Build171-Unsigned-xcarchive.zip
+          cat > release-assets/INSTALL-SIMULATOR-TEST.md <<'EOF'
+          # LumaSift iOS 2.0.14 Build 171 Simulator TEST
+
+          This unsigned TEST application is for Apple’s iOS Simulator. It cannot be
+          installed on a physical iPhone or distributed through the App Store without
+          Apple distribution signing.
+
+          1. Install Xcode on a Mac and launch an iPhone Simulator.
+          2. Unzip `LumaSift-iOS-v2.0.14-Build171-Simulator-TEST.zip`.
+          3. Run `xcrun simctl install booted CinaVault.app`.
+          4. Open CinaVault from the Simulator home screen.
+          EOF
+          shasum -a 256 release-assets/*.zip > release-assets/SHA256SUMS.txt
+          cat > test-evidence/TEST-NOTES.md <<EOF
+          # LumaSift iOS Build 171 Test Notes
+
+          - Version: ${APP_VERSION}
+          - Build: ${BUILD_NUMBER}
+          - Commit: ${GITHUB_SHA}
+          - Simulator build: passed
+          - Unit tests: passed
+          - Distribution signing: not included; simulator TEST and unsigned archive only.
+          EOF
+          zip -j release-assets/LumaSift-iOS-v2.0.14-Build171-Test-Notes.zip test-evidence/TEST-NOTES.md
+
+      - name: Upload validated iOS release artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}-${{ github.sha }}
+          path: release-assets/*
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Publish Build 171 iOS Simulator TEST prerelease
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          target_commitish: ${{ github.sha }}
+          name: "LumaSift iOS 2.0.14 Build 171 — Simulator TEST"
+          body_path: RELEASE_NOTES_BUILD171.md
+          prerelease: true
+          fail_on_unmatched_files: true
+          files: |
+            release-assets/LumaSift-iOS-v2.0.14-Build171-Simulator-TEST.zip
+            release-assets/LumaSift-iOS-v2.0.14-Build171-Unsigned-xcarchive.zip
+            release-assets/LumaSift-iOS-v2.0.14-Build171-Test-Notes.zip
+            release-assets/INSTALL-SIMULATOR-TEST.md
+            release-assets/SHA256SUMS.txt
