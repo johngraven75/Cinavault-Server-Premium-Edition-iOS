@@ -98,6 +98,7 @@ actor CinaVaultAPI {
         agentConfiguration.httpCookieStorage = nil
         agentConfiguration.timeoutIntervalForRequest = 150
         agentConfiguration.timeoutIntervalForResource = 180
+        agentConfiguration.waitsForConnectivity = true
         agentSession = URLSession(
             configuration: agentConfiguration,
             delegate: SecureRedirectDelegate(),
