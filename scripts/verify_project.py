@@ -202,6 +202,13 @@ require_all(
     ],
 )
 
+release_source = read("CinaVaultIOS/CinaVaultRelease.swift")
+if 'static let displayName = "v1.0.3 Pre-Beta Build 103"' not in release_source:
+    errors.append("CinaVaultRelease.displayName must name the matching Windows release")
+for stale in ("v2.12 Build 1.12", "2.0.12 (112)"):
+    if stale in read("CinaVaultIOS/Build109RootView.swift"):
+        errors.append(f"stale release label {stale!r} in Build109RootView.swift")
+
 contract_text = read("docs/platform-parity.json")
 if contract_text:
     try:
