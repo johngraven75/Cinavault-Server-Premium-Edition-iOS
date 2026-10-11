@@ -96,7 +96,7 @@ jobs:
           3. Run `xcrun simctl install booted CinaVault.app`.
           4. Open CinaVault from the Simulator home screen.
           EOF
-          shasum -a 256 package-staging/CinaVault-iOS-v1.0.3-Build-103-Simulator-TEST.zip > package-staging/SIMULATOR-SHA256SUMS.txt
+          (cd package-staging && shasum -a 256 CinaVault-iOS-v1.0.3-Build-103-Simulator-TEST.zip > SIMULATOR-SHA256SUMS.txt)
           echo '- Simulator TEST package: PASS' >> test-evidence/TEST-NOTES.md
 
       - name: Create unsigned archive candidate
