@@ -1,10 +1,10 @@
-name: iOS v2.13 Build 1.13 Simulator TEST
+name: iOS v1.0.3 Pre-Beta Build 103 Simulator TEST
 
 on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, release/v2.13-build-1.13]
+    branches: [main, release/v1.0.3-build-103]
   workflow_dispatch:
 
 permissions:
@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  TEST_ARTIFACT_NAME: CinaVault-iOS-v2.13-Build-1.13-Test-Notes
+  TEST_ARTIFACT_NAME: CinaVault-iOS-v1.0.3-Build-103-Test-Notes
 
 jobs:
   test-build-evidence:
@@ -31,10 +31,10 @@ jobs:
           cat > test-evidence/TEST-NOTES.md <<EOF
           # CinaVault iOS Test Notes
 
-          - Public release: v2.13
-          - Build: 1.13
-          - Internal version: 2.0.13
-          - iOS build number: 113
+          - Public release: v1.0.3 Pre-Beta
+          - Build: 103
+          - Internal version: 1.0.3
+          - iOS build number: 1003
           - Commit: ${GITHUB_SHA}
           - Event: ${GITHUB_EVENT_NAME}
           - Started UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -47,8 +47,8 @@ jobs:
 
       - name: Verify version identity
         run: |
-          grep -F 'MARKETING_VERSION: 2.0.13' project.yml
-          grep -F 'CURRENT_PROJECT_VERSION: 113' project.yml
+          grep -F 'MARKETING_VERSION: 1.0.3' project.yml
+          grep -F 'CURRENT_PROJECT_VERSION: 1003' project.yml
           echo '- Version identity: PASS' >> test-evidence/TEST-NOTES.md
 
       - name: Install tooling
@@ -84,7 +84,7 @@ jobs:
           set -euo pipefail
           APP_PATH="$(find "$HOME/Library/Developer/Xcode/DerivedData" -path '*/Build/Products/Debug-iphonesimulator/CinaVault.app' -type d -print -quit)"
           test -n "$APP_PATH"
-          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" package-staging/CinaVault-iOS-v2.13-Build-1.13-Simulator-TEST.zip
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" package-staging/CinaVault-iOS-v1.0.3-Build-103-Simulator-TEST.zip
           cat > package-staging/INSTALL-SIMULATOR-TEST.md <<'EOF'
           # Install the CinaVault iOS Simulator TEST
 
@@ -92,17 +92,17 @@ jobs:
           on a physical iPhone or distributed through the App Store without Apple signing.
 
           1. Install Xcode on a Mac and launch an iPhone Simulator.
-          2. Unzip `CinaVault-iOS-v2.13-Build-1.13-Simulator-TEST.zip`.
+          2. Unzip `CinaVault-iOS-v1.0.3-Build-103-Simulator-TEST.zip`.
           3. Run `xcrun simctl install booted CinaVault.app`.
           4. Open CinaVault from the Simulator home screen.
           EOF
-          shasum -a 256 package-staging/CinaVault-iOS-v2.13-Build-1.13-Simulator-TEST.zip > package-staging/SIMULATOR-SHA256SUMS.txt
+          (cd package-staging && shasum -a 256 CinaVault-iOS-v1.0.3-Build-103-Simulator-TEST.zip > SIMULATOR-SHA256SUMS.txt)
           echo '- Simulator TEST package: PASS' >> test-evidence/TEST-NOTES.md
 
       - name: Create unsigned archive candidate
         run: |
-          xcodebuild -workspace CinaVaultIOS.xcworkspace -scheme CinaVaultIOS -configuration Release -sdk iphoneos -archivePath package-staging/CinaVault-iOS-v2.13-Build-1.13.xcarchive CODE_SIGNING_ALLOWED=NO archive 2>&1 | tee test-evidence/ios-archive.log
-          ditto -c -k --sequesterRsrc --keepParent package-staging/CinaVault-iOS-v2.13-Build-1.13.xcarchive package-staging/CinaVault-iOS-v2.13-Build-1.13-xcarchive.zip
+          xcodebuild -workspace CinaVaultIOS.xcworkspace -scheme CinaVaultIOS -configuration Release -sdk iphoneos -archivePath package-staging/CinaVault-iOS-v1.0.3-Build-103.xcarchive CODE_SIGNING_ALLOWED=NO archive 2>&1 | tee test-evidence/ios-archive.log
+          ditto -c -k --sequesterRsrc --keepParent package-staging/CinaVault-iOS-v1.0.3-Build-103.xcarchive package-staging/CinaVault-iOS-v1.0.3-Build-103-xcarchive.zip
           shasum -a 256 package-staging/*.zip | tee test-evidence/IOS-SHA256SUMS.txt
           echo '- Unsigned archive validation: PASS' >> test-evidence/TEST-NOTES.md
 
@@ -110,7 +110,7 @@ jobs:
         if: success()
         run: |
           printf '\n## Final result\n- Result: PASS\n- Completed UTC: %s\n- Distribution signing remains required before App Store or device publication.\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> test-evidence/TEST-NOTES.md
-          zip -j package-staging/CinaVault-iOS-v2.13-Build-1.13-Test-Notes.zip test-evidence/*
+          zip -j package-staging/CinaVault-iOS-v1.0.3-Build-103-Test-Notes.zip test-evidence/*
 
       - name: Record failure
         if: failure()
@@ -131,18 +131,18 @@ jobs:
         if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: CinaVault-iOS-v2.13-Build-1.13-Simulator-TEST
+          name: CinaVault-iOS-v1.0.3-Build-103-Simulator-TEST
           path: package-staging/
           if-no-files-found: error
           retention-days: 30
 
-      - name: Publish iOS v2.13 Build 1.13 Simulator TEST prerelease
+      - name: Publish iOS v1.0.3 Pre-Beta Build 103 Simulator TEST prerelease
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
-          tag_name: v2.0.13-ios-test
+          tag_name: v1.0.3-ios-test
           target_commitish: ${{ github.sha }}
-          name: CinaVault iOS v2.13 Build 1.13 — Simulator TEST
+          name: CinaVault iOS v1.0.3 Pre-Beta Build 103 — Simulator TEST
           prerelease: true
           generate_release_notes: true
           fail_on_unmatched_files: true
@@ -151,9 +151,9 @@ jobs:
             install notes, unsigned archive, and test evidence. Apple distribution
             signing remains required for App Store or physical-device installation.
           files: |
-            package-staging/CinaVault-iOS-v2.13-Build-1.13-Simulator-TEST.zip
-            package-staging/CinaVault-iOS-v2.13-Build-1.13-xcarchive.zip
-            package-staging/CinaVault-iOS-v2.13-Build-1.13-Test-Notes.zip
+            package-staging/CinaVault-iOS-v1.0.3-Build-103-Simulator-TEST.zip
+            package-staging/CinaVault-iOS-v1.0.3-Build-103-xcarchive.zip
+            package-staging/CinaVault-iOS-v1.0.3-Build-103-Test-Notes.zip
             package-staging/INSTALL-SIMULATOR-TEST.md
             package-staging/SIMULATOR-SHA256SUMS.txt
             test-evidence/IOS-SHA256SUMS.txt

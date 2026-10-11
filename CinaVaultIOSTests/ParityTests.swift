@@ -79,4 +79,10 @@ final class ParityTests: XCTestCase {
 
         XCTAssertNotEqual(before, after)
     }
+
+    func testReleaseLabelMatchesWindowsBuild() {
+        XCTAssertEqual(CinaVaultRelease.displayName, "v1.0.3 Pre-Beta Build 103")
+        // Tests run hosted in the app, so this reads the app's own Info.plist.
+        XCTAssertEqual(CinaVaultRelease.bundleVersion, "1.0.3 (1003)")
+    }
 }
