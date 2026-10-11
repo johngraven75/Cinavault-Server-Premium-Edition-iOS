@@ -249,10 +249,12 @@ final class CinaVaultModel: ObservableObject {
                 if status.hasFace {
                     face = try? await api.loadAgentFace(session: session)
                 }
+                guard self.session == session else { return }
                 agent.status = status
                 agent.face = status.hasFace ? (face ?? agent.face) : nil
                 agent.error = nil
             } catch {
+                guard self.session == session else { return }
                 agent.error = agentMessage(for: error, fallback: "The agent is not available on this server yet.")
             }
         }
@@ -268,10 +270,13 @@ final class CinaVaultModel: ObservableObject {
         Task {
             do {
                 let reply = try await api.sendAgentMessage(session: session, message: message)
+                // A reply that lands after sign-out belongs to the previous account.
+                guard self.session == session else { return }
                 agent.messages = Array((agent.messages + [AgentChatMessage(fromAgent: true, text: reply)]).suffix(AgentState.maxMessages))
                 agent.sending = false
                 agent.speakingUntil = Date().addingTimeInterval(AgentState.speakingSeconds(reply))
             } catch {
+                guard self.session == session else { return }
                 agent.sending = false
                 agent.error = agentMessage(for: error, fallback: "The agent could not answer.")
             }
@@ -279,11 +284,17 @@ final class CinaVaultModel: ObservableObject {
     }
 
     func resetAgentConversation() {
-        guard let session else { return }
+        guard let session, !agent.sending else { return }
         agent.messages = []
         agent.error = nil
         agent.speakingUntil = .distantPast
-        Task { try? await api.resetAgent(session: session) }
+        // Holding the composer until the server has reset keeps the next message in the new conversation.
+        agent.sending = true
+        Task {
+            try? await api.resetAgent(session: session)
+            guard self.session == session else { return }
+            agent.sending = false
+        }
     }
 
     /// The server's own explanation when it gave one, otherwise the system's.
