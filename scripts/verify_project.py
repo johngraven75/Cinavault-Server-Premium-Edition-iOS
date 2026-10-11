@@ -98,6 +98,10 @@ api = require_all(
         '"/api/control/snapshot"',
         '"/api/control/action"',
         '"/api/cast/grant/\\(mediaKey)"',
+        '"/api/agent/status"',
+        '"/api/agent/chat"',
+        '"/api/agent/face"',
+        "agentSession",
         "Credentials must not be embedded",
     ],
 )
@@ -201,6 +205,16 @@ require_all(
         "No registered capability may be removed",
     ],
 )
+
+require_all(
+    "CinaVaultIOS/AgentView.swift",
+    ["PortraitRenderer", "accessibilityReduceMotion", "PortraitMath.speechMouth"],
+)
+require_all(
+    "CinaVaultIOS/PortraitRenderer.swift",
+    ["makeLibrary(source:", "drawIndexedPrimitives"],
+)
+require_all("CinaVaultIOS/Build109RootView.swift", ["AgentView(model: model)"])
 
 release_source = read("CinaVaultIOS/CinaVaultRelease.swift")
 if 'static let displayName = "v1.0.3 Pre-Beta Build 103"' not in release_source:

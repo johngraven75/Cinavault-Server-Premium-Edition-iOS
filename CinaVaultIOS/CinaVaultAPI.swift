@@ -56,9 +56,25 @@ actor CinaVaultAPI {
         let actionId: String
     }
 
+    private struct AgentChatBody: Encodable {
+        let message: String
+    }
+
+    private struct AgentChatResponse: Decodable {
+        let reply: String
+    }
+
+    private struct AgentFaceResponse: Decodable {
+        let dataUrl: String
+        let calibration: PortraitCalibration
+    }
+
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
     private let urlSession: URLSession
+    /// The agent may search the library a few times before it answers, so its
+    /// requests get longer timeouts than the rest of the API.
+    private let agentSession: URLSession
 
     init() {
         let configuration = URLSessionConfiguration.ephemeral
@@ -76,6 +92,72 @@ actor CinaVaultAPI {
             delegate: SecureRedirectDelegate(),
             delegateQueue: nil
         )
+        let agentConfiguration = URLSessionConfiguration.ephemeral
+        agentConfiguration.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+        agentConfiguration.urlCache = nil
+        agentConfiguration.httpCookieStorage = nil
+        agentConfiguration.timeoutIntervalForRequest = 150
+        agentConfiguration.timeoutIntervalForResource = 180
+        agentConfiguration.waitsForConnectivity = true
+        agentSession = URLSession(
+            configuration: agentConfiguration,
+            delegate: SecureRedirectDelegate(),
+            delegateQueue: nil
+        )
+    }
+
+    func loadAgentStatus(session: RemoteSession) async throws -> AgentStatus {
+        try await request(
+            baseURL: session.endpoint,
+            path: "/api/agent/status",
+            method: "GET",
+            token: session.token,
+            body: Optional<String>.none
+        )
+    }
+
+    /// The owner's agent face, or nil when none is set.
+    func loadAgentFace(session: RemoteSession) async throws -> AgentFace? {
+        let response: AgentFaceResponse
+        do {
+            response = try await request(
+                baseURL: session.endpoint,
+                path: "/api/agent/face",
+                method: "GET",
+                token: session.token,
+                body: Optional<String>.none
+            )
+        } catch CinaVaultAPIError.server(status: 404, message: _) {
+            return nil
+        }
+        guard let payload = AgentState.dataURLPayload(response.dataUrl),
+              let photo = Data(base64Encoded: payload) else {
+            throw CinaVaultAPIError.invalidResponse
+        }
+        return AgentFace(photo: photo, calibration: response.calibration)
+    }
+
+    /// Sends one message to the agent and returns its reply.
+    func sendAgentMessage(session: RemoteSession, message: String) async throws -> String {
+        let response: AgentChatResponse = try await request(
+            baseURL: session.endpoint,
+            path: "/api/agent/chat",
+            method: "POST",
+            token: session.token,
+            body: AgentChatBody(message: message),
+            using: agentSession
+        )
+        return response.reply
+    }
+
+    func resetAgent(session: RemoteSession) async throws {
+        let url = try resolve(baseURL: session.endpoint, path: "/api/agent/reset")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(session.token)", forHTTPHeaderField: "Authorization")
+        request.setValue("no-store", forHTTPHeaderField: "Cache-Control")
+        let (data, response) = try await urlSession.data(for: request)
+        try validate(response: response, data: data)
     }
 
     func loginWithPassword(endpoint: String, email: String, password: String) async throws -> RemoteSession {
@@ -187,7 +269,8 @@ actor CinaVaultAPI {
         path: String,
         method: String,
         token: String?,
-        body: Body?
+        body: Body?,
+        using session: URLSession? = nil
     ) async throws -> Response {
         let url = try resolve(baseURL: baseURL, path: path)
         var request = URLRequest(url: url)
@@ -203,7 +286,7 @@ actor CinaVaultAPI {
             request.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Content-Type")
         }
 
-        let (data, response) = try await urlSession.data(for: request)
+        let (data, response) = try await (session ?? urlSession).data(for: request)
         try validate(response: response, data: data)
         do {
             return try decoder.decode(Response.self, from: data)

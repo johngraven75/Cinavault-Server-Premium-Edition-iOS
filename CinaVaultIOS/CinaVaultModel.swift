@@ -40,6 +40,7 @@ final class CinaVaultModel: ObservableObject {
     @Published var preferences: ClientPreferences
     @Published private(set) var lastRefreshDate: Date?
     @Published private(set) var artworkRefreshRevision: UInt64 = 0
+    @Published private(set) var agent = AgentState()
 
     private let api = CinaVaultAPI()
     private let keychain = KeychainSessionStore()
@@ -117,6 +118,7 @@ final class CinaVaultModel: ObservableObject {
         artworkRefreshRevision &+= 1
         controlSnapshot = .unavailable("Sign in to synchronize controls.")
         selectedMedia = nil
+        agent = AgentState()
         setDestination(.library)
         statusMessage = "Signed out"
         errorMessage = nil
@@ -235,6 +237,72 @@ final class CinaVaultModel: ObservableObject {
 
     func clearError() {
         errorMessage = nil
+    }
+
+    /// Checks whether the server's agent is available and fetches its face.
+    func loadAgent() {
+        guard let session else { return }
+        Task {
+            do {
+                let status = try await api.loadAgentStatus(session: session)
+                var face: AgentFace?
+                if status.hasFace {
+                    face = try? await api.loadAgentFace(session: session)
+                }
+                guard self.session == session else { return }
+                agent.status = status
+                agent.face = status.hasFace ? (face ?? agent.face) : nil
+                agent.error = nil
+            } catch {
+                guard self.session == session else { return }
+                agent.error = agentMessage(for: error, fallback: "The agent is not available on this server yet.")
+            }
+        }
+    }
+
+    func sendAgentMessage(_ text: String) {
+        guard let session, !agent.sending else { return }
+        let message = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !message.isEmpty else { return }
+        agent.messages = Array((agent.messages + [AgentChatMessage(fromAgent: false, text: message)]).suffix(AgentState.maxMessages))
+        agent.sending = true
+        agent.error = nil
+        Task {
+            do {
+                let reply = try await api.sendAgentMessage(session: session, message: message)
+                // A reply that lands after sign-out belongs to the previous account.
+                guard self.session == session else { return }
+                agent.messages = Array((agent.messages + [AgentChatMessage(fromAgent: true, text: reply)]).suffix(AgentState.maxMessages))
+                agent.sending = false
+                agent.speakingUntil = Date().addingTimeInterval(AgentState.speakingSeconds(reply))
+            } catch {
+                guard self.session == session else { return }
+                agent.sending = false
+                agent.error = agentMessage(for: error, fallback: "The agent could not answer.")
+            }
+        }
+    }
+
+    func resetAgentConversation() {
+        guard let session, !agent.sending else { return }
+        agent.messages = []
+        agent.error = nil
+        agent.speakingUntil = .distantPast
+        // Holding the composer until the server has reset keeps the next message in the new conversation.
+        agent.sending = true
+        Task {
+            try? await api.resetAgent(session: session)
+            guard self.session == session else { return }
+            agent.sending = false
+        }
+    }
+
+    /// The server's own explanation when it gave one, otherwise the system's.
+    private func agentMessage(for error: Error, fallback: String) -> String {
+        if case let CinaVaultAPIError.server(_, message) = error, !message.isEmpty {
+            return message
+        }
+        return error.localizedDescription.isEmpty ? fallback : error.localizedDescription
     }
 
     private func setDestination(_ destination: AppDestination) {

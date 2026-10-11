@@ -90,6 +90,10 @@ private struct Build109Shell: View {
                 .tabItem { Label("Library", systemImage: "rectangle.stack.fill") }
                 .tag(0)
 
+            AgentView(model: model)
+                .tabItem { Label("Agent", systemImage: "face.smiling") }
+                .tag(5)
+
             Build109AIView(model: model)
                 .tabItem { Label("AI", systemImage: "sparkles") }
                 .tag(1)
