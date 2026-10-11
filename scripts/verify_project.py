@@ -30,8 +30,8 @@ require_all(
         'iOS: "17.0"',
         "SWIFT_VERSION",
         "CinaVaultIOSTests",
-        "MARKETING_VERSION: 2.0.13",
-        "CURRENT_PROJECT_VERSION: 113",
+        "MARKETING_VERSION: 1.0.3",
+        "CURRENT_PROJECT_VERSION: 1003",
     ],
 )
 require_all(
@@ -211,11 +211,13 @@ if contract_text:
     else:
         expected_reference = {
             "repository": "johngraven75/CinaVault-Premium",
-            "release": "v2-build-1.13",
+            "release": "v1.0.3-pre-beta",
+            "displayName": "v1.0.3 Pre-Beta Build 103",
+            "semanticVersion": "1.0.3",
             "platform": "windows",
         }
         if contract.get("reference") != expected_reference:
-            errors.append("iOS parity contract must reference current Windows v2 Build 1.13")
+            errors.append("iOS parity contract must reference current Windows v1.0.3 Pre-Beta Build 103")
         included = contract.get("includedRepositories")
         expected = [
             "johngraven75/CinaVault-Premium",
