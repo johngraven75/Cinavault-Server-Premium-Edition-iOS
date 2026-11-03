@@ -12,6 +12,7 @@ Every release must retain these capabilities unless the owner explicitly approve
 - HF token ownership remains in the Windows secure store; iOS displays only server-reported readiness.
 - Metadata provider readiness is synchronized from Windows at startup and after remote control actions.
 - AI Autopilot actions refresh the library and preserve the current media context.
+- Windows reference paired to v2.1.7-beta-3 (main 7bd0b75c); the iOS bundle remains 1.0.3 (1003), simulator-only. Platform-set green rule: nothing counts as green until ALL OS versions are greenlit through publish and release; iOS green alone does not make the set green, and any Windows change left unported must stay explicitly flagged as left behind.
 
 ## Change policy
 

@@ -3,10 +3,11 @@
   "contractId": "cinavault-platform-parity-v1",
   "reference": {
     "repository": "johngraven75/CinaVault-Premium",
-    "release": "v1.0.3-pre-beta",
-    "displayName": "v1.0.3 Pre-Beta Build 103",
-    "semanticVersion": "1.0.3",
-    "platform": "windows"
+    "release": "v2.1.7-beta-3",
+    "displayName": "v2.1.7 Beta 3 Build 217",
+    "semanticVersion": "2.1.7",
+    "platform": "windows",
+    "mainCommit": "7bd0b75c"
   },
   "includedRepositories": [
     "johngraven75/CinaVault-Premium",
@@ -132,7 +133,33 @@
       "requiredOutcome": "Design, functions, and user-visible options are compared against this contract in CI before release."
     }
   ],
+  "beta3PortStatus": {
+    "note": "iOS is a Swift remote client of the Windows Premium server, not the Windows server itself. This section records what beta-3 actually carries over to iOS and what remains left behind; it does not claim a full duplicate.",
+    "iosBundleUnchanged": "1.0.3 (1003), simulator-only unsigned test build. Only the Windows reference it pairs to moves, not the iOS bundle identity.",
+    "carriedOverViaServer": [
+      "authenticated-library",
+      "authenticated-artwork",
+      "authenticated-byte-range-streaming",
+      "opaque-media-identifiers",
+      "casting-playback-handoff",
+      "agent chat and agent face (read-only from the phone)"
+    ],
+    "clientScaffoldOnly": [
+      "control destinations (sources, downloads, live-tv, server, security, remote, advanced, cloud-nas, extensions) render the authenticated server control snapshot or a CONTROL ENDPOINT PENDING state; the Windows beta-3 server exposes no /api/control/snapshot endpoint, so these are scaffold, not live controls",
+      "single spatial dark theme matching the Windows accent set; no theme picker"
+    ],
+    "leftBehind": [
+      "per-card Check metadata / Unmatch / Delete (3-dot) actions",
+      "vault encryption (passphrase, XChaCha20-Poly1305, Argon2id) - Windows Tauri IPC only, no remote vault endpoint",
+      "WireGuard VPN engine and profile control (iOS links to iOS Settings only; a Network Extension entitlement is required before the app can control a tunnel)",
+      "Google Drive OAuth and Drive listing/ingestion",
+      "adult-provider gating and store-safe filtering as client behaviour (gating, if any, lives server-side only)",
+      "player transcoding, resume, skip intro/credits, and Next Up (iOS plays the granted stream directly with AVPlayer)",
+      "local scanning, local sources, downloads, Live TV playback, and server administration as local features"
+    ]
+  },
   "changePolicy": {
+    "platformSetGreenRule": "Nothing counts as green until ALL included OS versions are greenlit - checked and passing workflow all the way through publish and release, on every platform. One platform green alone does not make the set green. A Windows change left unported to a platform must be explicitly flagged as left behind; leaving it behind is not permitted unless the owner specifically says otherwise for that change.",
     "fullFileReplacementsOnly": true,
     "noRegressions": true,
     "crossPlatformAuditRequired": true,

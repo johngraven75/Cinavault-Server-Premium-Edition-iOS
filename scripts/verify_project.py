@@ -217,7 +217,7 @@ require_all(
 require_all("CinaVaultIOS/Build109RootView.swift", ["AgentView(model: model)"])
 
 release_source = read("CinaVaultIOS/CinaVaultRelease.swift")
-if 'static let displayName = "v1.0.3 Pre-Beta Build 103"' not in release_source:
+if 'static let displayName = "v2.1.7 Beta 3 Build 217"' not in release_source:
     errors.append("CinaVaultRelease.displayName must name the matching Windows release")
 for stale in ("v2.12 Build 1.12", "2.0.12 (112)"):
     if stale in read("CinaVaultIOS/Build109RootView.swift"):
@@ -232,13 +232,14 @@ if contract_text:
     else:
         expected_reference = {
             "repository": "johngraven75/CinaVault-Premium",
-            "release": "v1.0.3-pre-beta",
-            "displayName": "v1.0.3 Pre-Beta Build 103",
-            "semanticVersion": "1.0.3",
+            "release": "v2.1.7-beta-3",
+            "displayName": "v2.1.7 Beta 3 Build 217",
+            "semanticVersion": "2.1.7",
             "platform": "windows",
+            "mainCommit": "7bd0b75c",
         }
         if contract.get("reference") != expected_reference:
-            errors.append("iOS parity contract must reference current Windows v1.0.3 Pre-Beta Build 103")
+            errors.append("iOS parity contract must reference current Windows v2.1.7-beta-3")
         included = contract.get("includedRepositories")
         expected = [
             "johngraven75/CinaVault-Premium",
@@ -264,6 +265,15 @@ if contract_text:
         for key in ("fullFileReplacementsOnly", "noRegressions", "crossPlatformAuditRequired"):
             if policy.get(key) is not True:
                 errors.append(f"iOS parity policy must keep {key}=true")
+
+require_all(
+    "CinaVaultIOS/PlatformParity.swift",
+    ["Beta3PortEntry", "leftBehind", "PlatformParityView"],
+)
+require_all(
+    "CinaVaultIOS/Build109RootView.swift",
+    ["PlatformParityView"],
+)
 
 if errors:
     print("CinaVault iOS end-to-end parity verification failed:")
