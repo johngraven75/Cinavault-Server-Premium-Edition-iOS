@@ -81,8 +81,25 @@ final class ParityTests: XCTestCase {
     }
 
     func testReleaseLabelMatchesWindowsBuild() {
-        XCTAssertEqual(CinaVaultRelease.displayName, "v1.0.3 Pre-Beta Build 103")
+        // The Windows reference moved to beta-3; the iOS bundle itself is
+        // unchanged, so bundleVersion stays 1.0.3 (1003).
+        XCTAssertEqual(CinaVaultRelease.displayName, "v2.1.7 Beta 3 Build 217")
         // Tests run hosted in the app, so this reads the app's own Info.plist.
         XCTAssertEqual(CinaVaultRelease.bundleVersion, "1.0.3 (1003)")
+    }
+
+    func testBeta3PortStatusIsHonest() {
+        let entries = PlatformParity.entries
+        XCTAssertFalse(entries.isEmpty)
+        XCTAssertEqual(Set(entries.map(\.id)).count, entries.count)
+        XCTAssertTrue(entries.allSatisfy { !$0.note.isEmpty && !$0.windowsFeature.isEmpty })
+        XCTAssertEqual(PlatformParity.windowsDisplayName, CinaVaultRelease.displayName)
+        // A duplicate claim would list no gaps. This table must keep naming
+        // what is left behind until it is genuinely ported.
+        XCTAssertTrue(entries.contains { $0.status == .leftBehind })
+        XCTAssertTrue(entries.contains { $0.id == "vault" && $0.status == .leftBehind })
+        XCTAssertTrue(entries.contains { $0.id == "wireguard" && $0.status == .leftBehind })
+        XCTAssertTrue(entries.contains { $0.id == "google-drive" && $0.status == .leftBehind })
+        XCTAssertTrue(entries.contains { $0.id == "metadata-actions" && $0.status == .leftBehind })
     }
 }
