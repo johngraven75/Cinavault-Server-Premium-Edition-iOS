@@ -293,6 +293,10 @@ private struct Build109SettingsView: View {
                     LabeledContent("Release", value: CinaVaultRelease.displayName)
                     LabeledContent("Version", value: CinaVaultRelease.bundleVersion)
                 }
+                Section("Platform parity") {
+                    NavigationLink("Windows parity status") { PlatformParityView() }
+                    LabeledContent("Windows reference", value: CinaVaultRelease.displayName)
+                }
                 Section("Automation") {
                     Toggle("Automatic refresh", isOn: Binding(
                         get: { model.preferences.automaticRefreshEnabled },
